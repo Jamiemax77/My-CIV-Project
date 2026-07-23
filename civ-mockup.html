@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My CIV-Project — Final Mockup</title>
+    <style>
+      :root {
+        --navy: #06345c;
+        --navy-2: #0a2a47;
+        --steel: #5e8bb0;
+        --blue: #0e5fa4;
+        --royal: #1f49f5;
+        --sky: #aeebff;
+        --sky-soft: #e6f7ff;
+        --accent: #00c48c;
+        --danger: #ff5a5f;
+        --warning: #ffb020;
+        --bg: #eef3f8;
+        --card: #ffffff;
+        --text: #0c2233;
+        --muted: #7a8ca0;
+        --line: #dde6ef;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      }
+      body {
+        background: #c9d6e4;
+        padding: 32px;
+        color: var(--text);
+      }
+      h1.page-title {
+        text-align: center;
+        margin-bottom: 6px;
+        font-size: 26px;
+        color: var(--navy);
+      }
+      p.page-sub {
+        text-align: center;
+        color: #3f566e;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      .group-title {
+        text-align: center;
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--navy);
+        margin: 34px 0 18px;
+        letter-spacing: 0.3px;
+      }
+      .palette {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        margin-bottom: 28px;
+      }
+      .palette span {
+        width: 34px;
+        height: 20px;
+        border-radius: 5px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+      .canvas {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 36px;
+        justify-content: center;
+        align-items: flex-start;
+      }
+      .screen-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      .screen-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--navy);
+        background: #fff;
+        padding: 5px 14px;
+        border-radius: 20px;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      }
+      .phone {
+        width: 300px;
+        height: 620px;
+        background: #000;
+        border-radius: 38px;
+        padding: 10px;
+        box-shadow: 0 20px 45px rgba(6, 52, 92, 0.32);
+        position: relative;
+      }
+      .phone::before {
+        content: '';
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 110px;
+        height: 22px;
+        background: #000;
+        border-radius: 0 0 14px 14px;
+        z-index: 5;
+      }
+      .app {
+        width: 100%;
+        height: 100%;
+        background: var(--bg);
+        border-radius: 30px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+      }
+      .statusbar {
+        height: 34px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 20px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text);
+        flex-shrink: 0;
+      }
+      .header {
+        background: var(--navy);
+        color: #fff;
+        padding: 14px 18px 18px;
+        flex-shrink: 0;
+      }
+      .header.small {
+        padding: 14px 18px;
+      }
+      .header.admin {
+        background: linear-gradient(135deg, var(--navy), var(--blue));
+      }
+      .header .top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .header h2 {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .header .greet {
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .header .name {
+        font-size: 17px;
+        font-weight: 700;
+        margin-top: 2px;
+      }
+      .header .role-tag {
+        font-size: 9px;
+        background: #ffffff2e;
+        padding: 2px 8px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 5px;
+        font-weight: 600;
+      }
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #ffffff33;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 14px;
+      }
+      .back {
+        font-size: 18px;
+      }
+      .body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+      }
+      .body::-webkit-scrollbar {
+        width: 0;
+      }
+      .balance-card {
+        background: linear-gradient(135deg, var(--navy), var(--blue));
+        color: #fff;
+        border-radius: 18px;
+        padding: 18px;
+        margin-bottom: 16px;
+        box-shadow: 0 8px 20px rgba(6, 52, 92, 0.35);
+      }
+      .balance-card .lbl {
+        font-size: 12px;
+        opacity: 0.85;
+      }
+      .balance-card .amount {
+        font-size: 26px;
+        font-weight: 800;
+        margin: 4px 0 14px;
+      }
+      .balance-card .row {
+        display: flex;
+        justify-content: space-between;
+      }
+      .balance-card .row .lbl2 {
+        font-size: 10px;
+        opacity: 0.8;
+      }
+      .balance-card .row .val {
+        font-size: 14px;
+        font-weight: 700;
+        margin-top: 2px;
+      }
+      .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        margin: 6px 0 10px;
+        color: var(--navy);
+      }
+      .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-bottom: 16px;
+      }
+      .stat {
+        background: var(--card);
+        border-radius: 14px;
+        padding: 12px;
+        border: 1px solid var(--line);
+      }
+      .stat .ico {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+        margin-bottom: 8px;
+      }
+      .stat .v {
+        font-size: 16px;
+        font-weight: 800;
+        color: var(--navy);
+      }
+      .stat .k {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .list-item {
+        background: var(--card);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 1px solid var(--line);
+      }
+      .list-item .li-ico {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 15px;
+      }
+      .list-item .li-main {
+        flex: 1;
+      }
+      .list-item .li-t {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .list-item .li-s {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .list-item .li-amt {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .badge {
+        font-size: 9px;
+        font-weight: 700;
+        padding: 3px 8px;
+        border-radius: 20px;
+      }
+      .b-pending {
+        background: #fff3dc;
+        color: #b4790a;
+      }
+      .b-approved {
+        background: #dbf8ee;
+        color: #02875d;
+      }
+      .b-rejected {
+        background: #ffe3e4;
+        color: #c23a3f;
+      }
+      .field {
+        margin-bottom: 13px;
+      }
+      .field label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--navy);
+        margin-bottom: 5px;
+      }
+      .field input,
+      .field select,
+      .field textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        background: #fff;
+        border-radius: 10px;
+        padding: 11px 12px;
+        font-size: 13px;
+        color: var(--text);
+        outline: none;
+      }
+      .field input:focus,
+      .field select:focus,
+      .field textarea:focus {
+        border-color: var(--royal);
+      }
+      .field textarea {
+        resize: none;
+        height: 64px;
+      }
+      .field .hint {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .chips {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .chip {
+        font-size: 11px;
+        padding: 7px 12px;
+        border-radius: 20px;
+        border: 1px solid var(--line);
+        background: #fff;
+        color: #4a5578;
+      }
+      .chip.active {
+        background: var(--royal);
+        color: #fff;
+        border-color: var(--royal);
+      }
+      .upload-box {
+        border: 2px dashed var(--steel);
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        background: #fff;
+        margin-bottom: 10px;
+      }
+      .upload-box .u-ico {
+        font-size: 26px;
+      }
+      .upload-box .u-t {
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 6px;
+        color: var(--navy);
+      }
+      .upload-box .u-s {
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .file-pill {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 8px 10px;
+        margin-bottom: 7px;
+      }
+      .file-pill .fp-ico {
+        font-size: 16px;
+      }
+      .file-pill .fp-n {
+        font-size: 11px;
+        flex: 1;
+      }
+      .file-pill .fp-x {
+        font-size: 13px;
+        color: var(--danger);
+      }
+      .btn {
+        width: 100%;
+        background: var(--royal);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        padding: 13px;
+        font-size: 14px;
+        font-weight: 700;
+        margin-top: 6px;
+        box-shadow: 0 6px 14px rgba(31, 73, 245, 0.3);
+      }
+      .btn.ghost {
+        background: #fff;
+        color: var(--royal);
+        border: 1px solid var(--royal);
+        box-shadow: none;
+      }
+      .btn.navy {
+        background: var(--navy);
+        box-shadow: 0 6px 14px rgba(6, 52, 92, 0.3);
+      }
+      .btn-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .btn-row .btn {
+        margin-top: 0;
+      }
+      .btn.approve {
+        background: var(--accent);
+        box-shadow: none;
+      }
+      .btn.reject {
+        background: #fff;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        box-shadow: none;
+      }
+      .login {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 26px;
+      }
+      .logo {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        background: var(--navy);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        font-weight: 800;
+        margin: 0 auto 14px;
+        box-shadow: 0 8px 18px rgba(6, 52, 92, 0.35);
+      }
+      .login h1 {
+        text-align: center;
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--navy);
+      }
+      .login .tag {
+        text-align: center;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 4px 0 22px;
+      }
+      .login .role-toggle {
+        display: flex;
+        background: var(--sky-soft);
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 16px;
+      }
+      .login .role-toggle div {
+        flex: 1;
+        text-align: center;
+        font-size: 12px;
+        padding: 8px;
+        border-radius: 8px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+      .login .role-toggle div.on {
+        background: #fff;
+        color: var(--navy);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .login .fp {
+        text-align: center;
+        font-size: 11px;
+        color: var(--blue);
+        margin-top: 14px;
+      }
+      .pin-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--navy);
+        margin-bottom: 8px;
+        text-align: center;
+      }
+      .pin-boxes {
+        display: flex;
+        gap: 8px;
+        justify-content: center;
+        margin-bottom: 6px;
+      }
+      .pin-boxes .pin-dot {
+        width: 34px;
+        height: 44px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 800;
+        color: var(--navy);
+        background: #fff;
+      }
+      .pin-boxes .pin-dot.filled {
+        border-color: var(--royal);
+      }
+      .pin-hint {
+        font-size: 10px;
+        color: var(--muted);
+        text-align: center;
+        margin-bottom: 8px;
+      }
+      .bottomnav {
+        height: 58px;
+        background: #fff;
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        flex-shrink: 0;
+      }
+      .nav-i {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        font-size: 9px;
+        color: var(--muted);
+      }
+      .nav-i .ni-ico {
+        font-size: 17px;
+      }
+      .nav-i.on {
+        color: var(--navy);
+        font-weight: 700;
+      }
+      .progress-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .progress {
+        flex: 1;
+        height: 8px;
+        background: #dde6ef;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+      .progress .fill {
+        height: 100%;
+        background: var(--accent);
+        border-radius: 10px;
+      }
+      .admin-hero {
+        background: var(--sky-soft);
+        border: 1px solid var(--sky);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 16px;
+      }
+      .admin-hero .ah-lbl {
+        font-size: 11px;
+        color: var(--blue);
+        font-weight: 600;
+      }
+      .admin-hero .ah-v {
+        font-size: 22px;
+        font-weight: 800;
+        color: var(--navy);
+        margin-top: 2px;
+      }
+      .admin-hero .ah-s {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+      }
+      .search {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 12px;
+        margin-bottom: 12px;
+        background: #fff;
+        color: var(--muted);
+      }
+      .review-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+      .review-card .rc-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+      .review-card .rc-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--navy);
+      }
+      .review-card .rc-sub {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .review-card .rc-amt {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--navy);
+      }
+      .review-card .rc-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        padding: 4px 0;
+        border-top: 1px dashed var(--line);
+      }
+      .review-card .rc-row .k {
+        color: var(--muted);
+      }
+      .doc-thumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--sky-soft);
+        border-radius: 8px;
+        padding: 8px;
+        margin: 8px 0;
+        font-size: 11px;
+        color: var(--blue);
+        font-weight: 600;
+      }
+      .profile-hero {
+        background: linear-gradient(135deg, var(--navy), var(--blue));
+        color: #fff;
+        padding: 22px 18px 26px;
+        text-align: center;
+        flex-shrink: 0;
+      }
+      .profile-hero .pf-photo {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        margin: 0 auto 10px;
+        background: #ffffff2e;
+        border: 3px solid #ffffff55;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 30px;
+        font-weight: 800;
+        position: relative;
+      }
+      .profile-hero .pf-cam {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--royal);
+        border: 2px solid #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+      .profile-hero .pf-name {
+        font-size: 17px;
+        font-weight: 800;
+      }
+      .profile-hero .pf-id {
+        font-size: 11px;
+        opacity: 0.9;
+        margin-top: 2px;
+        letter-spacing: 0.5px;
+      }
+      .profile-hero .pf-tag {
+        font-size: 9px;
+        background: #ffffff2e;
+        padding: 3px 10px;
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 8px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .info-card {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 6px 14px;
+        margin-bottom: 14px;
+      }
+      .info-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 11px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .info-row:last-child {
+        border-bottom: none;
+      }
+      .info-row .ir-ico {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        background: var(--sky-soft);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
+      }
+      .info-row .ir-main {
+        flex: 1;
+      }
+      .info-row .ir-k {
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .info-row .ir-v {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--navy);
+        margin-top: 1px;
+      }
+      .menu-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 13px 14px;
+        margin-bottom: 8px;
+      }
+      .menu-item .mi-ico {
+        width: 30px;
+        height: 30px;
+        border-radius: 9px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+      .menu-item .mi-t {
+        flex: 1;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--navy);
+      }
+      .menu-item .mi-arrow {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .logout {
+        width: 100%;
+        background: #fff;
+        color: var(--danger);
+        border: 1px solid var(--danger);
+        border-radius: 12px;
+        padding: 13px;
+        font-size: 14px;
+        font-weight: 700;
+        margin-top: 6px;
+      }
+      .acct-card {
+        border-radius: 16px;
+        padding: 16px;
+        color: #fff;
+        margin-bottom: 12px;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 8px 18px rgba(6, 52, 92, 0.28);
+      }
+      .acct-card.bank {
+        background: linear-gradient(135deg, var(--navy), var(--blue));
+      }
+      .acct-card.wallet {
+        background: linear-gradient(135deg, var(--royal), #5b33ff);
+      }
+      .acct-card .ac-type {
+        font-size: 10px;
+        opacity: 0.85;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .acct-card .ac-bank {
+        font-size: 15px;
+        font-weight: 800;
+        margin-top: 2px;
+      }
+      .acct-card .ac-num {
+        font-size: 19px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        margin: 12px 0 6px;
+      }
+      .acct-card .ac-name {
+        font-size: 11px;
+        opacity: 0.9;
+      }
+      .acct-card .ac-tag {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        font-size: 8px;
+        background: #ffffff33;
+        padding: 3px 8px;
+        border-radius: 20px;
+        font-weight: 700;
+      }
+      .receipt {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        overflow: hidden;
+        margin-bottom: 14px;
+      }
+      .receipt .rcp-top {
+        background: var(--accent);
+        color: #fff;
+        text-align: center;
+        padding: 18px 14px;
+      }
+      .receipt .rcp-check {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        background: #ffffff33;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+        margin: 0 auto 8px;
+      }
+      .receipt .rcp-status {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .receipt .rcp-amt {
+        font-size: 24px;
+        font-weight: 800;
+        margin-top: 4px;
+      }
+      .receipt .rcp-body {
+        padding: 14px;
+      }
+      .receipt .rcp-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        padding: 7px 0;
+        border-bottom: 1px dashed var(--line);
+      }
+      .receipt .rcp-row:last-child {
+        border-bottom: none;
+      }
+      .receipt .rcp-row .k {
+        color: var(--muted);
+      }
+      .receipt .rcp-row .v {
+        font-weight: 700;
+        color: var(--navy);
+        text-align: right;
+        max-width: 60%;
+      }
+      .receipt .rcp-proof {
+        border-top: 1px solid var(--line);
+        padding: 12px 14px;
+      }
+      .proof-img {
+        height: 120px;
+        border-radius: 10px;
+        background: repeating-linear-gradient(
+          45deg,
+          #eef3f8,
+          #eef3f8 10px,
+          #e1e9f2 10px,
+          #e1e9f2 20px
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        font-size: 11px;
+        border: 1px solid var(--line);
+      }
+      .halo {
+        position: absolute;
+        top: 38%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(174, 235, 255, 0.18) 0%,
+          transparent 70%
+        );
+        animation: pulse 2.6s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.5;
+          transform: translate(-50%, -50%) scale(0.9);
+        }
+        50% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1.08);
+        }
+      }
+      .puzzle {
+        position: relative;
+        width: 172px;
+        height: 172px;
+        margin-top: -30px;
+        animation: snap 0.4s ease 1.7s;
+      }
+      .piece {
+        position: absolute;
+        width: 82px;
+        height: 82px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 42px;
+        font-weight: 800;
+        color: #fff;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+        opacity: 0;
+      }
+      .p-c {
+        top: 0;
+        left: 0;
+        background: linear-gradient(135deg, #5e8bb0, #4a7699);
+        animation: slideC 0.8s cubic-bezier(0.2, 0.8, 0.25, 1) 0.2s forwards;
+      }
+      .p-i {
+        top: 0;
+        right: 0;
+        background: linear-gradient(135deg, #0e5fa4, #0a4c86);
+        animation: slideI 0.8s cubic-bezier(0.2, 0.8, 0.25, 1) 0.45s forwards;
+      }
+      .p-v {
+        bottom: 0;
+        left: 0;
+        background: linear-gradient(135deg, #1f49f5, #1236c9);
+        animation: slideV 0.8s cubic-bezier(0.2, 0.8, 0.25, 1) 0.7s forwards;
+      }
+      .p-dot {
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(135deg, #aeebff, #7fd8f5);
+        animation: slideD 0.8s cubic-bezier(0.2, 0.8, 0.25, 1) 0.95s forwards;
+      }
+      .p-dot .mini {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: #ffffff55;
+      }
+      @keyframes slideC {
+        0% {
+          opacity: 0;
+          transform: translate(-140px, -90px) rotate(-25deg) scale(0.6);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(0, 0) rotate(0) scale(1);
+        }
+      }
+      @keyframes slideI {
+        0% {
+          opacity: 0;
+          transform: translate(140px, -90px) rotate(25deg) scale(0.6);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(0, 0) rotate(0) scale(1);
+        }
+      }
+      @keyframes slideV {
+        0% {
+          opacity: 0;
+          transform: translate(-140px, 90px) rotate(25deg) scale(0.6);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(0, 0) rotate(0) scale(1);
+        }
+      }
+      @keyframes slideD {
+        0% {
+          opacity: 0;
+          transform: translate(140px, 90px) rotate(-25deg) scale(0.6);
+        }
+        100% {
+          opacity: 1;
+          transform: translate(0, 0) rotate(0) scale(1);
+        }
+      }
+      @keyframes snap {
+        0% {
+          transform: scale(1);
+        }
+        40% {
+          transform: scale(1.06);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+      .brand {
+        position: absolute;
+        bottom: 118px;
+        text-align: center;
+        opacity: 0;
+        animation: fadeUp 0.7s ease 1.9s forwards;
+      }
+      .brand .t1 {
+        font-size: 24px;
+        font-weight: 800;
+        color: #fff;
+        letter-spacing: 0.5px;
+      }
+      .brand .t2 {
+        font-size: 12px;
+        color: #aeebff;
+        margin-top: 4px;
+        letter-spacing: 1px;
+      }
+      @keyframes fadeUp {
+        0% {
+          opacity: 0;
+          transform: translateY(16px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .loader {
+        position: absolute;
+        bottom: 60px;
+        display: flex;
+        gap: 7px;
+        opacity: 0;
+        animation: fadeUp 0.6s ease 2.2s forwards;
+      }
+      .loader span {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #aeebff;
+        animation: bounce 1s infinite;
+      }
+      .loader span:nth-child(2) {
+        animation-delay: 0.15s;
+      }
+      .loader span:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      @keyframes bounce {
+        0%,
+        100% {
+          transform: translateY(0);
+          opacity: 0.5;
+        }
+        50% {
+          transform: translateY(-7px);
+          opacity: 1;
+        }
+      }
+      .app.splash {
+        background: radial-gradient(
+          circle at 50% 38%,
+          #0a4c86 0%,
+          #06345c 55%,
+          #04263f 100%
+        );
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+      .palette span:nth-child(1) {
+        background: var(--navy);
+      }
+      .palette span:nth-child(2) {
+        background: var(--steel);
+      }
+      .palette span:nth-child(3) {
+        background: var(--blue);
+      }
+      .palette span:nth-child(4) {
+        background: var(--royal);
+      }
+      .palette span:nth-child(5) {
+        background: var(--sky);
+      }
+      .bg-mint {
+        background: #dbf8ee;
+      }
+      .bg-amber {
+        background: #fff3dc;
+      }
+      .bg-sky {
+        background: #e6f7ff;
+      }
+      .avatar-navy {
+        background: var(--navy);
+        color: #fff;
+      }
+      .avatar-steel {
+        background: var(--steel);
+        color: #fff;
+      }
+      .avatar-blue {
+        background: var(--blue);
+        color: #fff;
+      }
+      .text-accent {
+        color: var(--accent);
+      }
+      .receipt .rcp-row .v.text-accent {
+        color: var(--accent);
+      }
+      .spacer-18 {
+        width: 18px;
+      }
+      .section-title.mt-lg {
+        margin-top: 18px;
+      }
+      .chips.mb-lg {
+        margin-bottom: 14px;
+      }
+      .acct-hint {
+        font-size: 10px;
+        color: var(--muted);
+        margin: -6px 0 12px;
+      }
+      .proof-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--navy);
+        margin-bottom: 8px;
+      }
+      .progress-count {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--accent);
+      }
+      .about-logo {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: var(--navy);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        font-weight: 800;
+        margin: 4px auto 12px;
+        box-shadow: 0 8px 18px rgba(6, 52, 92, 0.3);
+      }
+      .about-app {
+        text-align: center;
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--navy);
+        margin-bottom: 18px;
+      }
+      .about-text {
+        font-size: 12px;
+        color: var(--text);
+        line-height: 1.6;
+        margin-bottom: 14px;
+      }
+      .about-text.mb-0 {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1 class="page-title">My CIV-Project</h1>
+    <p class="page-sub">
+      Mockup Final — Portal Beasiswa PPA · React Native (Android)
+    </p>
+    <div class="palette">
+      <span></span><span></span>
+      <span></span><span></span>
+      <span></span>
+    </div>
+
+    <!-- ===== 0. SPLASH ===== -->
+    <div class="group-title">🧩 TAMPILAN AWAL (SPLASH)</div>
+    <div class="canvas">
+      <div class="screen-wrap">
+        <div class="screen-label">0 · Splash — Puzzle CIV</div>
+        <div class="phone">
+          <div class="app splash">
+            <div class="halo"></div>
+            <div class="puzzle">
+              <div class="piece p-c">C</div>
+              <div class="piece p-i">I</div>
+              <div class="piece p-v">V</div>
+              <div class="piece p-dot"><div class="mini"></div></div>
+            </div>
+            <div class="brand">
+              <div class="t1">My CIV-Project</div>
+              <div class="t2">PORTAL BEASISWA PPA</div>
+            </div>
+            <div class="loader"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SISI PARTISIPAN ===== -->
+    <div class="group-title">👨‍🎓 SISI PARTISIPAN</div>
+    <div class="canvas">
+      <!-- P1 LOGIN -->
+      <div class="screen-wrap">
+        <div class="screen-label">P1 · Login (PIN)</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="login">
+              <div class="logo">CIV</div>
+              <h1>My CIV-Project</h1>
+              <div class="tag">Portal Beasiswa PPA</div>
+              <div class="role-toggle">
+                <div class="on">Partisipan</div>
+                <div>Admin / Staf</div>
+              </div>
+              <div class="field">
+                <label>Email / NIM</label
+                ><input type="text" value="participant@kampus.ac.id">
+              </div>
+              <div class="pin-label">Masukkan PIN</div>
+              <div class="pin-boxes">
+                <div class="pin-dot filled">•</div>
+                <div class="pin-dot filled">•</div>
+                <div class="pin-dot filled">•</div>
+                <div class="pin-dot filled">•</div>
+                <div class="pin-dot">•</div>
+                <div class="pin-dot">•</div>
+              </div>
+              <div class="pin-hint">6 digit angka rahasia Anda</div>
+              <button type="button" class="btn">Masuk</button>
+              <div class="fp">Lupa PIN?</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P2 DASHBOARD -->
+      <div class="screen-wrap">
+        <div class="screen-label">P2 · Dashboard Beasiswa</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="header">
+              <div class="top">
+                <div>
+                  <div class="greet">Selamat datang,</div>
+                  <div class="name">Andi Pratama</div>
+                </div>
+                <div class="avatar">AP</div>
+              </div>
+            </div>
+            <div class="body">
+              <div class="balance-card">
+                <div class="lbl">Total Beasiswa Diterima</div>
+                <div class="amount">Rp 12.000.000</div>
+                <div class="row">
+                  <div>
+                    <div class="lbl2">Digunakan</div>
+                    <div class="val">Rp 7.500.000</div>
+                  </div>
+                  <div>
+                    <div class="lbl2">Sisa Dana</div>
+                    <div class="val">Rp 4.500.000</div>
+                  </div>
+                </div>
+              </div>
+              <div class="section-title">Ringkasan</div>
+              <div class="stat-grid">
+                <div class="stat">
+                  <div class="ico bg-mint">✅</div>
+                  <div class="v">8</div>
+                  <div class="k">Klaim Disetujui</div>
+                </div>
+                <div class="stat">
+                  <div class="ico bg-amber">⏳</div>
+                  <div class="v">2</div>
+                  <div class="k">Menunggu Verifikasi</div>
+                </div>
+              </div>
+              <div class="section-title">Riwayat Pencairan</div>
+              <div class="list-item">
+                <div class="li-ico bg-sky">💰</div>
+                <div class="li-main">
+                  <div class="li-t">Pencairan Semester Ganjil</div>
+                  <div class="li-s">15 Sep 2025</div>
+                </div>
+                <div class="li-amt text-accent">+6.000.000</div>
+              </div>
+              <div class="list-item">
+                <div class="li-ico bg-sky">💰</div>
+                <div class="li-main">
+                  <div class="li-t">Pencairan Semester Genap</div>
+                  <div class="li-s">20 Feb 2026</div>
+                </div>
+                <div class="li-amt text-accent">+6.000.000</div>
+              </div>
+            </div>
+            <div class="bottomnav">
+              <div class="nav-i on"><span class="ni-ico">🏠</span>Beranda</div>
+              <div class="nav-i"><span class="ni-ico">🧾</span>Klaim</div>
+              <div class="nav-i"><span class="ni-ico">📄</span>Laporan</div>
+              <div class="nav-i"><span class="ni-ico">👤</span>Profil</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P3 REIMBURSEMENT -->
+      <div class="screen-wrap">
+        <div class="screen-label">P3 · Pengajuan Reimbursement</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="header small">
+              <div class="top">
+                <span class="back">←</span>
+                <h2>Ajukan Pengembalian</h2>
+                <span class="spacer-18"></span>
+              </div>
+            </div>
+            <div class="body">
+              <div class="field">
+                <label>Jenis Pengajuan</label>
+                <div class="chips">
+                  <div class="chip active">Reimbursement</div>
+                  <div class="chip">Pengembalian Sisa</div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Kategori</label
+                ><select>
+                  <option>Pembayaran UKT / Kuliah</option>
+                  <option>Pembelian Buku</option>
+                  <option>Alat / Perlengkapan</option>
+                  <option>Lainnya</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Nominal (Rp)</label><input type="text" value="2.500.000">
+              </div>
+              <div class="field">
+                <label>Keterangan</label
+                ><textarea>Pembayaran UKT semester genap 2025/2026</textarea>
+              </div>
+              <div class="field">
+                <label>Bukti (Nota / Kwitansi / Bukti Bayar)</label>
+                <div class="upload-box">
+                  <div class="u-ico">📤</div>
+                  <div class="u-t">Unggah Berkas</div>
+                  <div class="u-s">Kamera · Galeri · PDF (maks 5MB)</div>
+                </div>
+                <div class="file-pill">
+                  <span class="fp-ico">🧾</span
+                  ><span class="fp-n">bukti_ukt_genap.pdf</span
+                  ><span class="fp-x">✕</span>
+                </div>
+              </div>
+              <button type="button" class="btn">Kirim Pengajuan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P4 LAPORAN -->
+      <div class="screen-wrap">
+        <div class="screen-label">P4 · Upload Laporan Semester</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="header small">
+              <div class="top">
+                <span class="back">←</span>
+                <h2>Laporan Semester</h2>
+                <span class="spacer-18"></span>
+              </div>
+            </div>
+            <div class="body">
+              <div class="progress-row">
+                <div class="progress">
+                  <div class="fill" style="width: 75%"></div>
+                </div>
+                <span class="progress-count">3/4</span>
+              </div>
+              <div class="section-title">Unggah Laporan Baru</div>
+              <div class="field">
+                <label>Semester</label
+                ><select>
+                  <option>Genap 2025/2026</option>
+                  <option>Ganjil 2025/2026</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>IPK Semester Ini</label><input type="text" value="3.78">
+              </div>
+              <div class="field">
+                <label>Berkas KHS / Transkrip</label>
+                <div class="upload-box">
+                  <div class="u-ico">📄</div>
+                  <div class="u-t">Pilih File PDF</div>
+                  <div class="u-s">Bukti masih aktif berkuliah</div>
+                </div>
+              </div>
+              <button type="button" class="btn">Kirim Laporan</button>
+              <div class="section-title mt-lg">
+                Riwayat Laporan
+              </div>
+              <div class="list-item">
+                <div class="li-ico bg-mint">📄</div>
+                <div class="li-main">
+                  <div class="li-t">Ganjil 2025/2026</div>
+                  <div class="li-s">IPK 3.70</div>
+                </div>
+                <span class="badge b-approved">Terverifikasi</span>
+              </div>
+              <div class="list-item">
+                <div class="li-ico bg-amber">📄</div>
+                <div class="li-main">
+                  <div class="li-t">Genap 2024/2025</div>
+                  <div class="li-s">IPK 3.65</div>
+                </div>
+                <span class="badge b-pending">Menunggu</span>
+              </div>
+            </div>
+            <div class="bottomnav">
+              <div class="nav-i"><span class="ni-ico">🏠</span>Beranda</div>
+              <div class="nav-i"><span class="ni-ico">🧾</span>Klaim</div>
+              <div class="nav-i on"><span class="ni-ico">📄</span>Laporan</div>
+              <div class="nav-i"><span class="ni-ico">👤</span>Profil</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- P5 PROFIL -->
+      <div class="screen-wrap">
+        <div class="screen-label">P5 · Profil Partisipan</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="profile-hero">
+              <div class="pf-photo">AP<span class="pf-cam">📷</span></div>
+              <div class="pf-name">Andi Pratama</div>
+              <div class="pf-id">No. ID : ID022400127</div>
+              <div class="pf-tag">PENERIMA BEASISWA PPA</div>
+            </div>
+            <div class="body">
+              <div class="section-title">Data Diri</div>
+              <div class="info-card">
+                <div class="info-row">
+                  <div class="ir-ico">🆔</div>
+                  <div class="ir-main">
+                    <div class="ir-k">Nomor ID</div>
+                    <div class="ir-v">ID022400127</div>
+                  </div>
+                </div>
+                <div class="info-row">
+                  <div class="ir-ico">👤</div>
+                  <div class="ir-main">
+                    <div class="ir-k">Nama</div>
+                    <div class="ir-v">Andi Pratama</div>
+                  </div>
+                </div>
+                <div class="info-row">
+                  <div class="ir-ico">✉️</div>
+                  <div class="ir-main">
+                    <div class="ir-k">Email</div>
+                    <div class="ir-v">andi.pratama@kampus.ac.id</div>
+                  </div>
+                </div>
+                <div class="info-row">
+                  <div class="ir-ico">📱</div>
+                  <div class="ir-main">
+                    <div class="ir-k">No. HP / WA</div>
+                    <div class="ir-v">0812-3456-7890</div>
+                  </div>
+                </div>
+                <div class="info-row">
+                  <div class="ir-ico">⚧</div>
+                  <div class="ir-main">
+                    <div class="ir-k">Jenis Kelamin</div>
+                    <div class="ir-v">Laki-laki</div>
+                  </div>
+                </div>
+                <div class="info-row">
+                  <div class="ir-ico">🏛️</div>
+                  <div class="ir-main">
+                    <div class="ir-k">Universitas</div>
+                    <div class="ir-v">Universitas Negeri Contoh</div>
+                  </div>
+                </div>
+                <div class="info-row">
+                  <div class="ir-ico">🎓</div>
+                  <div class="ir-main">
+                    <div class="ir-k">Semester</div>
+                    <div class="ir-v">Semester 6</div>
+                  </div>
+                </div>
+              </div>
+              <div class="section-title">Pengaturan</div>
+              <div class="menu-item">
+                <div class="mi-ico bg-sky">✏️</div>
+                <div class="mi-t">Edit Profil</div>
+                <span class="mi-arrow">›</span>
+              </div>
+              <div class="menu-item">
+                <div class="mi-ico bg-sky">🏦</div>
+                <div class="mi-t">Rekening &amp; E-Wallet</div>
+                <span class="mi-arrow">›</span>
+              </div>
+              <div class="menu-item">
+                <div class="mi-ico bg-amber">🔒</div>
+                <div class="mi-t">Ubah PIN</div>
+                <span class="mi-arrow">›</span>
+              </div>
+              <div class="menu-item">
+                <div class="mi-ico bg-sky">🔔</div>
+                <div class="mi-t">Notifikasi</div>
+                <span class="mi-arrow">›</span>
+              </div>
+              <div class="menu-item">
+                <div class="mi-ico bg-sky">ℹ️</div>
+                <div class="mi-t">Tentang My CIV-Project</div>
+                <span class="mi-arrow">›</span>
+              </div>
+              <div class="menu-item">
+                <div class="mi-ico bg-sky">❓</div>
+                <div class="mi-t">Bantuan &amp; FAQ</div>
+                <span class="mi-arrow">›</span>
+              </div>
+              <button type="button" class="logout">Keluar</button>
+            </div>
+            <div class="bottomnav">
+              <div class="nav-i"><span class="ni-ico">🏠</span>Beranda</div>
+              <div class="nav-i"><span class="ni-ico">🧾</span>Klaim</div>
+              <div class="nav-i"><span class="ni-ico">📄</span>Laporan</div>
+              <div class="nav-i on"><span class="ni-ico">👤</span>Profil</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P6 REKENING & E-WALLET -->
+      <div class="screen-wrap">
+        <div class="screen-label">P6 · Rekening &amp; E-Wallet</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="header small">
+              <div class="top">
+                <span class="back">←</span>
+                <h2>Rekening &amp; E-Wallet</h2>
+                <span class="spacer-18"></span>
+              </div>
+            </div>
+            <div class="body">
+              <div class="section-title">Rekening Tujuan Pencairan</div>
+              <div class="acct-card bank">
+                <span class="ac-tag">UTAMA</span>
+                <div class="ac-type">Rekening Bank</div>
+                <div class="ac-bank">Bank BRI</div>
+                <div class="ac-num">•••• •••• 4821</div>
+                <div class="ac-name">a.n. Andi Pratama</div>
+              </div>
+              <div class="acct-card wallet">
+                <div class="ac-type">E-Wallet</div>
+                <div class="ac-bank">DANA</div>
+                <div class="ac-num">0812 3456 7890</div>
+                <div class="ac-name">a.n. Andi Pratama</div>
+              </div>
+
+              <div class="section-title">Tambah / Ubah</div>
+              <div class="field">
+                <label>Jenis</label
+                ><select>
+                  <option>Rekening Bank</option>
+                  <option>E-Wallet (DANA / OVO / GoPay / ShopeePay)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Nama Bank / E-Wallet</label
+                ><input type="text" placeholder="cth: Bank BRI">
+              </div>
+              <div class="field">
+                <label>Nomor Rekening / Nomor Wallet</label
+                ><input type="text" placeholder="Masukkan nomor tujuan">
+              </div>
+              <div class="field">
+                <label>Atas Nama</label><input type="text" value="Andi Pratama">
+              </div>
+              <div class="acct-hint">
+                Pastikan nama sesuai identitas untuk mempercepat verifikasi
+                pencairan.
+              </div>
+              <button type="button" class="btn">Simpan Rekening</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P7 BUKTI TRANSFER (sisi partisipan: melihat) -->
+      <div class="screen-wrap">
+        <div class="screen-label">P7 · Bukti Transfer (dari Admin)</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="header small">
+              <div class="top">
+                <span class="back">←</span>
+                <h2>Bukti Transfer</h2>
+                <span class="spacer-18"></span>
+              </div>
+            </div>
+            <div class="body">
+              <div class="receipt">
+                <div class="rcp-top">
+                  <div class="rcp-check">✓</div>
+                  <div class="rcp-status">Dana Berhasil Ditransfer</div>
+                  <div class="rcp-amt">Rp 6.000.000</div>
+                </div>
+                <div class="rcp-body">
+                  <div class="rcp-row">
+                    <span class="k">Tanggal &amp; Jam</span
+                    ><span class="v">20 Feb 2026, 10:24</span>
+                  </div>
+                  <div class="rcp-row">
+                    <span class="k">Untuk</span
+                    ><span class="v">Pencairan Semester Genap</span>
+                  </div>
+                  <div class="rcp-row">
+                    <span class="k">Dari</span
+                    ><span class="v">Staf PPA (Admin)</span>
+                  </div>
+                  <div class="rcp-row">
+                    <span class="k">Bank Pengirim</span
+                    ><span class="v">Bank Mandiri</span>
+                  </div>
+                  <div class="rcp-row">
+                    <span class="k">Rekening Tujuan</span
+                    ><span class="v">BRI •••• 4821 (Andi Pratama)</span>
+                  </div>
+                  <div class="rcp-row">
+                    <span class="k">No. Referensi</span
+                    ><span class="v">TRX20260220-0091</span>
+                  </div>
+                  <div class="rcp-row">
+                    <span class="k">Status</span
+                    ><span class="v text-accent">Berhasil</span>
+                  </div>
+                </div>
+                <div class="rcp-proof">
+                  <div class="proof-label">Lampiran Bukti Transfer</div>
+                  <div class="proof-img">🧾 bukti_transfer_genap.jpg</div>
+                </div>
+              </div>
+              <div class="btn-row">
+                <button type="button" class="btn ghost">Unduh</button
+                ><button type="button" class="btn navy">Konfirmasi Terima</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- P8 TENTANG APLIKASI -->
+      <div class="screen-wrap">
+        <div class="screen-label">P8 · Tentang My CIV-Project</div>
+        <div class="phone">
+          <div class="app">
+            <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+            <div class="header small">
+              <div class="top">
+                <span class="back">←</span>
+                <h2>Tentang Aplikasi</h2>
+                <span class="spacer-18"></span>
+              </div>
+            </div>
+            <div class="body">
+              <div class="about-logo">CIV</div>
+              <div class="about-app">My CIV-Project</div>
+              <p class="about-text">
+                My CIV-Project adalah aplikasi mobile berbasis Android yang
+                dirancang untuk mempermudah pengelolaan beasiswa PPA
+                (Peningkatan Prestasi Akademik). Aplikasi ini menjadi jembatan
+                antara penerima beasiswa dan pihak pengelola, menghadirkan
+                proses penyaluran dana, pertanggungjawaban penggunaan, dan
+                pelaporan akademik yang transparan, rapi, dan mudah diakses
+                dari genggaman tangan.
+              </p>
+              <p class="about-text">
+                Kami percaya bahwa pengelolaan beasiswa yang baik dimulai dari
+                kemudahan dan keterbukaan. Karena itu, My CIV-Project
+                menyatukan semua kebutuhan administrasi beasiswa, mulai dari
+                memantau dana, mengajukan reimbursement, hingga melaporkan
+                progres kuliah, ke dalam satu platform yang sederhana dan
+                tepercaya.
+              </p>
+
+              <div class="section-title">Visi</div>
+              <p class="about-text">
+                Menjadi platform digital yang mendukung transparansi dan
+                akuntabilitas dalam pengelolaan beasiswa, sekaligus membantu
+                para penerima berfokus pada prestasi akademik mereka tanpa
+                terbebani proses administrasi yang rumit.
+              </p>
+
+              <div class="section-title">Misi</div>
+              <p class="about-text">
+                Kami berkomitmen menyederhanakan proses administrasi beasiswa
+                melalui teknologi, menghadirkan keterbukaan penuh antara
+                pengelola dan penerima dalam setiap penyaluran dan penggunaan
+                dana, mendorong kedisiplinan pelaporan akademik penerima
+                beasiswa, serta menjaga keamanan data dan kenyamanan pengguna
+                di setiap interaksi.
+              </p>
+
+              <div class="section-title">Apa yang Kami Tawarkan</div>
+              <p class="about-text">
+                Bagi partisipan, My CIV-Project memudahkan pemantauan jumlah
+                beasiswa yang diterima beserta rincian penggunaannya,
+                pengajuan reimbursement atau pengembalian dana dengan
+                melampirkan bukti, pengunggahan laporan akademik tiap
+                semester, serta pengelolaan rekening dan e-wallet untuk
+                pencairan. Bagi pihak pengelola, aplikasi ini menyediakan
+                sarana untuk menginput dana, memverifikasi pengajuan dan
+                laporan, memantau keaktifan penerima, serta mengirimkan bukti
+                transfer sebagai konfirmasi penyaluran dana yang sah dan
+                terdokumentasi.
+              </p>
+
+              <div class="section-title">Komitmen Kami</div>
+              <p class="about-text mb-0">
+                Setiap fitur dalam My CIV-Project dibangun dengan
+                mengutamakan keamanan, kemudahan, dan transparansi. Akses
+                pengguna dilindungi dengan autentikasi PIN, dan seluruh proses
+                pencairan dana tercatat dan dapat ditelusuri oleh kedua belah
+                pihak, sehingga kepercayaan antara pengelola dan penerima
+                beasiswa selalu terjaga.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <!-- ===== SISI ADMIN / STAF ===== -->
+  <div class="group-title">🛠️ SISI ADMIN / STAF</div>
+  <div class="canvas">
+
+    <!-- A1 DASHBOARD ADMIN -->
+    <div class="screen-wrap">
+      <div class="screen-label">A1 · Dashboard Admin</div>
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+          <div class="header admin">
+            <div class="top">
+              <div>
+                <div class="greet">Panel Pengelola</div>
+                <div class="name">Staf PPA</div>
+                <span class="role-tag">ADMIN</span>
+              </div>
+              <div class="avatar">SP</div>
+            </div>
+          </div>
+          <div class="body">
+            <div class="admin-hero">
+              <div class="ah-lbl">Total Dana Tersalurkan</div>
+              <div class="ah-v">Rp 540.000.000</div>
+              <div class="ah-s">45 partisipan aktif · Periode 2025/2026</div>
+            </div>
+            <div class="stat-grid">
+              <div class="stat">
+                <div class="ico bg-amber">🧾</div>
+                <div class="v">12</div>
+                <div class="k">Klaim Perlu Verifikasi</div>
+              </div>
+              <div class="stat">
+                <div class="ico bg-sky">📄</div>
+                <div class="v">7</div>
+                <div class="k">Laporan Perlu Verifikasi</div>
+              </div>
+            </div>
+            <div class="section-title">Daftar Partisipan</div>
+            <input class="search" type="text" placeholder="🔍 Cari nama / NIM...">
+            <div class="list-item">
+              <div class="li-ico avatar-navy">AP</div>
+              <div class="li-main">
+                <div class="li-t">Andi Pratama</div>
+                <div class="li-s">Sisa: Rp 4.500.000</div>
+              </div>
+              <span class="badge b-approved">Aktif</span>
+            </div>
+            <div class="list-item">
+              <div class="li-ico avatar-steel">SR</div>
+              <div class="li-main">
+                <div class="li-t">Siti Rahma</div>
+                <div class="li-s">Sisa: Rp 1.200.000</div>
+              </div>
+              <span class="badge b-pending">Belum Lapor</span>
+            </div>
+            <div class="list-item">
+              <div class="li-ico avatar-blue">BW</div>
+              <div class="li-main">
+                <div class="li-t">Budi Wijaya</div>
+                <div class="li-s">Sisa: Rp 6.000.000</div>
+              </div>
+              <span class="badge b-approved">Aktif</span>
+            </div>
+          </div>
+          <div class="bottomnav">
+            <div class="nav-i on"><span class="ni-ico">📊</span>Dashboard</div>
+            <div class="nav-i"><span class="ni-ico">➕</span>Input Dana</div>
+            <div class="nav-i"><span class="ni-ico">✔️</span>Verifikasi</div>
+            <div class="nav-i"><span class="ni-ico">👤</span>Profil</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A2 INPUT DANA -->
+    <div class="screen-wrap">
+      <div class="screen-label">A2 · Input Dana Beasiswa</div>
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+          <div class="header admin small">
+            <div class="top">
+              <span class="back">←</span>
+              <h2>Input Dana Beasiswa</h2>
+              <span class="spacer-18"></span>
+            </div>
+          </div>
+          <div class="body">
+            <div class="field">
+              <label>Pilih Partisipan</label>
+              <select>
+                <option>Andi Pratama — ID022400127</option>
+                <option>Siti Rahma — ID022400128</option>
+                <option>Budi Wijaya — ID022400129</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Program Beasiswa</label>
+              <input type="text" value="PPA (Peningkatan Prestasi Akademik)">
+            </div>
+            <div class="field">
+              <label>Periode</label>
+              <select>
+                <option>Genap 2025/2026</option>
+                <option>Ganjil 2025/2026</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Nominal Beasiswa (Rp)</label>
+              <input type="text" value="6.000.000">
+            </div>
+            <div class="field">
+              <label>Tanggal Pencairan</label>
+              <input type="text" value="20 Feb 2026">
+            </div>
+            <div class="field">
+              <label>Catatan</label>
+              <textarea>Pencairan tahap 2 semester genap.</textarea>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn ghost">Simpan Draf</button>
+              <button type="button" class="btn navy">Simpan &amp; Cairkan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A3 VERIFIKASI REIMBURSEMENT -->
+    <div class="screen-wrap">
+      <div class="screen-label">A3 · Verifikasi Reimbursement</div>
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+          <div class="header admin small">
+            <div class="top">
+              <span class="back">←</span>
+              <h2>Verifikasi Klaim</h2>
+              <span class="spacer-18"></span>
+            </div>
+          </div>
+          <div class="body">
+            <div class="chips mb-lg">
+              <div class="chip active">Menunggu (12)</div>
+              <div class="chip">Disetujui</div>
+              <div class="chip">Ditolak</div>
+            </div>
+            <div class="review-card">
+              <div class="rc-head">
+                <div>
+                  <div class="rc-name">Andi Pratama</div>
+                  <div class="rc-sub">ID022400127 · Reimbursement UKT</div>
+                </div>
+                <div class="rc-amt">Rp 2.500.000</div>
+              </div>
+              <div class="rc-row"><span class="k">Kategori</span><span>Pembayaran UKT</span></div>
+              <div class="rc-row"><span class="k">Tanggal</span><span>18 Feb 2026</span></div>
+              <div class="doc-thumb">🧾 bukti_ukt_genap.pdf</div>
+              <div class="btn-row">
+                <button type="button" class="btn reject">Tolak</button>
+                <button type="button" class="btn approve">Setujui</button>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="rc-head">
+                <div>
+                  <div class="rc-name">Siti Rahma</div>
+                  <div class="rc-sub">ID022400128 · Reimbursement Buku</div>
+                </div>
+                <div class="rc-amt">Rp 450.000</div>
+              </div>
+              <div class="rc-row"><span class="k">Kategori</span><span>Pembelian Buku</span></div>
+              <div class="rc-row"><span class="k">Tanggal</span><span>17 Feb 2026</span></div>
+              <div class="doc-thumb">🧾 nota_buku.jpg</div>
+              <div class="btn-row">
+                <button type="button" class="btn reject">Tolak</button>
+                <button type="button" class="btn approve">Setujui</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A4 VERIFIKASI LAPORAN -->
+    <div class="screen-wrap">
+      <div class="screen-label">A4 · Verifikasi Laporan Semester</div>
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+          <div class="header admin small">
+            <div class="top">
+              <span class="back">←</span>
+              <h2>Verifikasi Laporan</h2>
+              <span class="spacer-18"></span>
+            </div>
+          </div>
+          <div class="body">
+            <div class="chips mb-lg">
+              <div class="chip active">Menunggu (7)</div>
+              <div class="chip">Terverifikasi</div>
+              <div class="chip">Revisi</div>
+            </div>
+            <div class="review-card">
+              <div class="rc-head">
+                <div>
+                  <div class="rc-name">Andi Pratama</div>
+                  <div class="rc-sub">ID022400127 · Semester 6</div>
+                </div>
+                <span class="badge b-pending">Menunggu</span>
+              </div>
+              <div class="rc-row"><span class="k">Semester</span><span>Genap 2025/2026</span></div>
+              <div class="rc-row"><span class="k">IPK</span><span>3.78</span></div>
+              <div class="rc-row"><span class="k">Status Kuliah</span><span class="text-accent">Aktif</span></div>
+              <div class="doc-thumb">📄 khs_genap_2026.pdf</div>
+              <div class="btn-row">
+                <button type="button" class="btn reject">Minta Revisi</button>
+                <button type="button" class="btn approve">Verifikasi</button>
+              </div>
+            </div>
+            <div class="review-card">
+              <div class="rc-head">
+                <div>
+                  <div class="rc-name">Budi Wijaya</div>
+                  <div class="rc-sub">ID022400129 · Semester 4</div>
+                </div>
+                <span class="badge b-pending">Menunggu</span>
+              </div>
+              <div class="rc-row"><span class="k">Semester</span><span>Genap 2025/2026</span></div>
+              <div class="rc-row"><span class="k">IPK</span><span>3.55</span></div>
+              <div class="doc-thumb">📄 transkrip_budi.pdf</div>
+              <div class="btn-row">
+                <button type="button" class="btn reject">Minta Revisi</button>
+                <button type="button" class="btn approve">Verifikasi</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- A5 UNGGAH BUKTI TRANSFER -->
+    <div class="screen-wrap">
+      <div class="screen-label">A5 · Unggah Bukti Transfer</div>
+      <div class="phone">
+        <div class="app">
+          <div class="statusbar"><span>09:41</span><span>📶 🔋</span></div>
+          <div class="header admin small">
+            <div class="top">
+              <span class="back">←</span>
+              <h2>Kirim Bukti Transfer</h2>
+              <span class="spacer-18"></span>
+            </div>
+          </div>
+          <div class="body">
+            <div class="field">
+              <label>Kepada Partisipan</label>
+              <select>
+                <option>Andi Pratama — ID022400127</option>
+                <option>Siti Rahma — ID022400128</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Untuk Pencairan</label>
+              <select>
+                <option>Semester Genap 2025/2026</option>
+                <option>Reimbursement UKT</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Nominal Transfer (Rp)</label>
+              <input type="text" value="6.000.000">
+            </div>
+            <div class="field">
+              <label>Bank Pengirim</label>
+              <input type="text" value="Bank Mandiri">
+            </div>
+            <div class="field">
+              <label>Rekening Tujuan</label>
+              <input type="text" value="BRI •••• 4821 (Andi Pratama)">
+            </div>
+            <div class="field">
+              <label>Tanggal Transfer</label>
+              <input type="text" value="20 Feb 2026">
+            </div>
+            <div class="field">
+              <label>No. Referensi</label>
+              <input type="text" value="TRX20260220-0091">
+            </div>
+            <div class="field">
+              <label>Lampiran Bukti Transfer</label>
+              <div class="upload-box">
+                <div class="u-ico">📤</div>
+                <div class="u-t">Unggah Foto / PDF Bukti</div>
+                <div class="u-s">JPG / PNG / PDF (maks 5MB)</div>
+              </div>
+              <div class="file-pill">
+                <span class="fp-ico">🧾</span>
+                <span class="fp-n">bukti_transfer_genap.jpg</span>
+                <span class="fp-x">✕</span>
+              </div>
+            </div>
+            <button type="button" class="btn navy">Kirim ke Partisipan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
