@@ -14,6 +14,7 @@ import {
   ReviewStatus,
   ReportStatus,
   ScholarshipType,
+  TransferProofMethod,
   UserProfile,
 } from '../types/models';
 
@@ -254,12 +255,14 @@ export function useAddTransferProof() {
   return useMutation({
     mutationFn: (input: {
       participantId: string;
-      disbursementId: string;
+      disbursementId?: string;
       amount: number;
+      method: TransferProofMethod;
       senderBank: string;
       destAccount: string;
       transferredAt?: string;
       referenceNo: string;
+      note?: string;
       proofFileId?: string;
       proofFileName?: string;
     }) => api.post<{ id: string }>('/admin/transfer-proofs', input, token),

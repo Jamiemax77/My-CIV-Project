@@ -12,6 +12,7 @@ import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { Skeleton } from '../../components/Skeleton';
 import { StatCard } from '../../components/StatCard';
 import { useDashboard } from '../../hooks/useDashboard';
+import { useTransferProofs } from '../../hooks/useParticipantData';
 import { buildFileUrl } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import { useAuthStore } from '../../store/authStore';
@@ -25,6 +26,8 @@ export function DashboardScreen() {
   const initial = user?.fullName?.charAt(0) ?? '?';
 
   const { data: summary, isLoading, isError, error, refetch, isRefetching } = useDashboard();
+  const { data: transferProofs } = useTransferProofs();
+  const otherTransfers = (transferProofs ?? []).filter((tp) => !tp.disbursementId);
 
   return (
     <View style={styles.screen}>
@@ -125,6 +128,30 @@ export function DashboardScreen() {
                   />
                 ))
               )}
+
+              {otherTransfers.length > 0 ? (
+                <>
+                  <Text style={[styles.sectionTitle, styles.gapTop]}>Transaksi Lainnya</Text>
+                  {otherTransfers.map((tp) => (
+                    <ListItem
+                      key={tp.id}
+                      icon="wallet-outline"
+                      iconBg={colors.skySoft}
+                      iconColor={colors.blue}
+                      title={tp.note ?? 'Transaksi Lainnya'}
+                      subtitle={formatDate(tp.transferredAt)}
+                      onPress={() =>
+                        navigation.navigate('TransferProof', { transferProofId: tp.id })
+                      }
+                      right={
+                        <Text style={styles.amount}>
+                          +{tp.amount.toLocaleString('id-ID')}
+                        </Text>
+                      }
+                    />
+                  ))}
+                </>
+              ) : null}
             </>
           )}
         </ResponsiveContainer>
@@ -156,6 +183,9 @@ const styles = StyleSheet.create({
     color: colors.navy,
     marginBottom: 10,
     marginTop: 4,
+  },
+  gapTop: {
+    marginTop: 20,
   },
   statGrid: {
     flexDirection: 'row',

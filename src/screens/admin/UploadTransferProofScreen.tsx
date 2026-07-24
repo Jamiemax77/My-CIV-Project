@@ -20,18 +20,44 @@ import { uploadFile } from '../../lib/api';
 import { formatAmountInput, formatDate, parseAmountInput } from '../../lib/format';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme';
+import { AccountItem } from '../../types/models';
 
-const schema = z.object({
-  participantId: z.string().min(1, 'Pilih partisipan'),
-  disbursementId: z.string().min(1, 'Pilih pencairan'),
-  amount: z
-    .string()
-    .min(1, 'Nominal wajib diisi')
-    .refine((v) => parseAmountInput(v) > 0, 'Nominal harus lebih dari 0'),
-  senderBank: z.string().trim().min(2, 'Bank pengirim wajib diisi'),
-  destAccount: z.string().trim().min(4, 'Rekening tujuan wajib diisi'),
-  referenceNo: z.string().trim().min(3, 'No. referensi wajib diisi'),
-});
+/** Full, unmasked account details an admin needs to actually perform the transfer. */
+function formatAccountLabel(account: AccountItem): string {
+  return `${account.provider} - ${account.number} a.n. ${account.holderName}`;
+}
+
+// Fixed values used for a cash handover — sender_bank/dest_account stay required at the DB
+// level either way, so these fill in for the fields that don't apply when no bank is involved.
+const TUNAI_SENDER_BANK = 'Tunai';
+const TUNAI_DEST_ACCOUNT = 'Diserahkan langsung (Tunai)';
+
+const schema = z
+  .object({
+    participantId: z.string().min(1, 'Pilih partisipan'),
+    disbursementId: z.string().optional(),
+    note: z.string().trim().optional(),
+    amount: z
+      .string()
+      .min(1, 'Nominal wajib diisi')
+      .refine((v) => parseAmountInput(v) > 0, 'Nominal harus lebih dari 0'),
+    method: z.enum(['transfer', 'tunai']),
+    senderBank: z.string().trim().optional(),
+    destAccount: z.string().trim().optional(),
+    referenceNo: z.string().trim().min(3, 'No. referensi wajib diisi'),
+  })
+  .refine((data) => !!data.disbursementId || (data.note?.trim().length ?? 0) >= 3, {
+    message: 'Pilih pencairan, atau isi keterangan untuk transaksi lainnya',
+    path: ['disbursementId'],
+  })
+  .refine((data) => data.method === 'tunai' || (data.senderBank?.trim().length ?? 0) >= 2, {
+    message: 'Bank pengirim wajib diisi',
+    path: ['senderBank'],
+  })
+  .refine((data) => data.method === 'tunai' || (data.destAccount?.trim().length ?? 0) >= 4, {
+    message: 'Rekening tujuan wajib diisi',
+    path: ['destAccount'],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
@@ -46,6 +72,7 @@ export function UploadTransferProofScreen() {
   const [sent, setSent] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [otherTransaction, setOtherTransaction] = useState(false);
 
   const {
     control,
@@ -59,7 +86,9 @@ export function UploadTransferProofScreen() {
     defaultValues: {
       participantId: '',
       disbursementId: '',
+      note: '',
       amount: '',
+      method: 'transfer',
       senderBank: 'Bank Mandiri',
       destAccount: '',
       referenceNo: '',
@@ -73,22 +102,29 @@ export function UploadTransferProofScreen() {
   }, [participants, watch, setValue]);
 
   const participantId = watch('participantId');
+  const method = watch('method');
   const { data: participantDisbursements } = useParticipantDisbursements(participantId || undefined);
   const { data: participantAccounts } = useParticipantAccounts(participantId || undefined);
 
+  // Auto-fill once per participant switch, using freshest data — not on every dep change,
+  // since participantDisbursements/participantAccounts also refetch in the background
+  // (focus refetch, other mutations invalidating the query) and re-running on every one of
+  // those would clobber whatever the admin has since typed/edited by hand.
+  const autoFilledForRef = React.useRef<string | null>(null);
   useEffect(() => {
     if (!participantId) return;
-    const first = participantDisbursements?.[0];
-    setValue('disbursementId', first?.id ?? '');
-    const primaryAccount = participantAccounts?.find((a) => a.isPrimary);
+    if (autoFilledForRef.current === participantId) return;
+    if (participantDisbursements === undefined || participantAccounts === undefined) return;
+    autoFilledForRef.current = participantId;
+
+    setOtherTransaction(false);
+    setValue('disbursementId', participantDisbursements[0]?.id ?? '');
+    setValue('note', '');
     setValue(
       'destAccount',
-      primaryAccount
-        ? `${primaryAccount.provider} •••• ${primaryAccount.number.slice(-4)}`
-        : ''
+      participantAccounts.length === 1 ? formatAccountLabel(participantAccounts[0]) : ''
     );
-    // Keyed only on participantId so unrelated data refreshes don't reset edited fields.
-  }, [participantId]);
+  }, [participantId, participantDisbursements, participantAccounts, setValue]);
 
   const onSubmit = async (values: FormValues) => {
     if (!file) {
@@ -103,10 +139,13 @@ export function UploadTransferProofScreen() {
       const uploaded = await uploadFile(file, 'transfer-proof', token, values.participantId);
       await addTransferProof.mutateAsync({
         participantId: values.participantId,
-        disbursementId: values.disbursementId,
+        disbursementId: values.disbursementId || undefined,
+        note: values.note?.trim() || undefined,
         amount: parseAmountInput(values.amount),
-        senderBank: values.senderBank.trim(),
-        destAccount: values.destAccount.trim(),
+        method: values.method,
+        senderBank: values.method === 'tunai' ? TUNAI_SENDER_BANK : (values.senderBank ?? '').trim(),
+        destAccount:
+          values.method === 'tunai' ? TUNAI_DEST_ACCOUNT : (values.destAccount ?? '').trim(),
         transferredAt: new Date().toISOString(),
         referenceNo: values.referenceNo.trim(),
         proofFileId: uploaded.fileId,
@@ -165,13 +204,41 @@ export function UploadTransferProofScreen() {
                   <Chip
                     key={d.id}
                     label={d.title}
-                    active={field.value === d.id}
-                    onPress={() => field.onChange(d.id)}
+                    active={!otherTransaction && field.value === d.id}
+                    onPress={() => {
+                      setOtherTransaction(false);
+                      field.onChange(d.id);
+                    }}
                   />
                 ))}
+                <Chip
+                  label="+ Transaksi Lainnya"
+                  active={otherTransaction}
+                  onPress={() => {
+                    setOtherTransaction(true);
+                    field.onChange('');
+                  }}
+                />
               </ChipGroup>
             )}
           />
+          {otherTransaction ? (
+            <View style={styles.gap}>
+              <Controller
+                control={control}
+                name="note"
+                render={({ field }) => (
+                  <Field
+                    label="Keterangan Transaksi Lainnya"
+                    placeholder="cth: Transport & konsumsi kegiatan Youth Cluster"
+                    multiline
+                    value={field.value}
+                    onChangeText={field.onChange}
+                  />
+                )}
+              />
+            </View>
+          ) : null}
           {errors.disbursementId ? (
             <Text style={styles.errorText}>{errors.disbursementId.message}</Text>
           ) : null}
@@ -193,43 +260,98 @@ export function UploadTransferProofScreen() {
             )}
           />
         </View>
-        <Controller
-          control={control}
-          name="senderBank"
-          render={({ field }) => (
-            <Field
-              label="Bank Pengirim"
-              value={field.value}
-              onChangeText={field.onChange}
-              error={errors.senderBank?.message}
+        {method === 'transfer' ? (
+          <>
+            <Controller
+              control={control}
+              name="senderBank"
+              render={({ field }) => (
+                <Field
+                  label="Bank Pengirim"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.senderBank?.message}
+                />
+              )}
             />
-          )}
-        />
-        <Controller
-          control={control}
-          name="destAccount"
-          render={({ field }) => (
-            <Field
-              label="Rekening Tujuan"
-              placeholder="cth: BRI •••• 4821 (Nama)"
-              value={field.value}
-              onChangeText={field.onChange}
-              error={errors.destAccount?.message}
+            <View style={styles.gap}>
+              <Text style={styles.fieldLabel}>Rekening Tujuan Partisipan</Text>
+              {!participantAccounts ? null : participantAccounts.length === 0 ? (
+                <Text style={styles.warningText}>
+                  ⚠ Partisipan ini belum mengisi rekening bank atau e-wallet. Isi rekening tujuan
+                  secara manual di bawah, atau minta partisipan melengkapinya dulu di menu
+                  Rekening & E-Wallet.
+                </Text>
+              ) : (
+                <ChipGroup>
+                  {participantAccounts.map((a) => (
+                    <Chip
+                      key={a.id}
+                      label={`${a.provider} (${a.kind === 'bank' ? 'Bank' : 'E-Wallet'})`}
+                      active={watch('destAccount') === formatAccountLabel(a)}
+                      onPress={() => setValue('destAccount', formatAccountLabel(a))}
+                    />
+                  ))}
+                </ChipGroup>
+              )}
+            </View>
+            <Controller
+              control={control}
+              name="destAccount"
+              render={({ field }) => (
+                <Field
+                  label="Rekening Tujuan"
+                  placeholder="cth: BRI - 1234567890 a.n. Budi Santoso"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.destAccount?.message}
+                />
+              )}
             />
-          )}
-        />
+          </>
+        ) : (
+          <View style={styles.gap}>
+            <Text style={styles.fieldLabel}>Penerimaan Tunai</Text>
+            <Text style={styles.hintText}>
+              Partisipan menerima dana secara tunai langsung dari bendahara — bank pengirim dan
+              rekening tujuan tidak diperlukan.
+            </Text>
+          </View>
+        )}
         <Field
           label="Tanggal Transfer"
           editable={false}
           value={formatDate(new Date().toISOString())}
         />
+
+        <View style={styles.gap}>
+          <Text style={styles.fieldLabel}>Metode Pembayaran</Text>
+          <Controller
+            control={control}
+            name="method"
+            render={({ field }) => (
+              <ChipGroup>
+                <Chip
+                  label="Transfer"
+                  active={field.value === 'transfer'}
+                  onPress={() => field.onChange('transfer')}
+                />
+                <Chip
+                  label="Tunai"
+                  active={field.value === 'tunai'}
+                  onPress={() => field.onChange('tunai')}
+                />
+              </ChipGroup>
+            )}
+          />
+        </View>
         <Controller
           control={control}
           name="referenceNo"
           render={({ field }) => (
             <Field
-              label="No. Referensi"
-              placeholder="TRX20260220-0091"
+              label={method === 'tunai' ? 'No. Kwitansi / Referensi' : 'No. Referensi'}
+              placeholder={method === 'tunai' ? 'KWT20260220-0091' : 'TRX20260220-0091'}
               value={field.value}
               onChangeText={field.onChange}
               error={errors.referenceNo?.message}
@@ -237,7 +359,9 @@ export function UploadTransferProofScreen() {
           )}
         />
 
-        <Text style={styles.fieldLabel}>Lampiran Bukti Transfer</Text>
+        <Text style={styles.fieldLabel}>
+          {method === 'tunai' ? 'Lampiran Bukti Tanda Terima Tunai' : 'Lampiran Bukti Transfer'}
+        </Text>
         <UploadBox
           mode="both"
           value={file}
@@ -284,6 +408,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.danger,
     marginTop: 4,
+  },
+  warningText: {
+    fontSize: 11,
+    color: colors.warning,
+    lineHeight: 16,
+  },
+  hintText: {
+    fontSize: 11,
+    color: colors.muted,
+    lineHeight: 16,
   },
   success: {
     fontSize: 11,

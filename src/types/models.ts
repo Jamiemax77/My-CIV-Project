@@ -95,17 +95,24 @@ export interface AccountItem {
   isPrimary: boolean;
 }
 
+export type TransferProofMethod = 'transfer' | 'tunai';
+
 export interface TransferProofItem {
   id: string;
   participantId: string;
-  disbursementId: string;
+  /** Absent for "Transaksi Lainnya" — a transfer not tied to a scholarship disbursement. */
+  disbursementId?: string;
   /** Only present on the participant's own list response (joined server-side). */
   disbursementTitle?: string;
   amount: number;
+  /** 'tunai' — participant picked up the cash in person from the treasurer. */
+  method: TransferProofMethod;
   senderBank: string;
   destAccount: string;
   transferredAt: string;
   referenceNo: string;
+  /** What the payment was for — required when there's no disbursementId. */
+  note?: string;
   proofFileId?: string;
   proofFileName: string;
   confirmedByParticipant: boolean;

@@ -65,11 +65,22 @@ export function TransferProofScreen() {
                 proofFileName={proof.proofFileName}
                 rows={[
                   { label: 'Tanggal & Jam', value: formatDateTime(proof.transferredAt) },
-                  { label: 'Untuk', value: proof.disbursementTitle ?? '-' },
+                  { label: 'Untuk', value: proof.disbursementTitle ?? proof.note ?? '-' },
                   { label: 'Dari', value: 'Staf PPA (Admin)' },
-                  { label: 'Bank Pengirim', value: proof.senderBank },
-                  { label: 'Rekening Tujuan', value: proof.destAccount },
-                  { label: 'No. Referensi', value: proof.referenceNo },
+                  {
+                    label: 'Metode',
+                    value: proof.method === 'tunai' ? 'Tunai (di kantor)' : 'Transfer Bank',
+                  },
+                  ...(proof.method === 'tunai'
+                    ? []
+                    : [
+                        { label: 'Bank Pengirim', value: proof.senderBank },
+                        { label: 'Rekening Tujuan', value: proof.destAccount },
+                      ]),
+                  {
+                    label: proof.method === 'tunai' ? 'No. Kwitansi' : 'No. Referensi',
+                    value: proof.referenceNo,
+                  },
                   {
                     label: 'Status',
                     value: proof.confirmedByParticipant ? 'Dikonfirmasi' : 'Berhasil',

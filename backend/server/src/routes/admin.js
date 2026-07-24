@@ -239,7 +239,12 @@ router.get(
     const [sources] = await pool.query('SELECT * FROM fund_sources ORDER BY created_at DESC');
     const [profiles] = await pool.query("SELECT * FROM profiles WHERE role = 'participant'");
     const [disbursements] = await pool.query("SELECT * FROM disbursements WHERE status != 'draft'");
-    const [transfers] = await pool.query('SELECT participant_id, amount FROM transfer_proofs');
+    // Only transfers tied to a real scholarship disbursement count toward "received" —
+    // "Transaksi Lainnya" transfers (disbursement_id IS NULL) are miscellaneous non-scholarship
+    // payments (e.g. activity transport/consumption) and must not inflate these fund totals.
+    const [transfers] = await pool.query(
+      'SELECT participant_id, amount FROM transfer_proofs WHERE disbursement_id IS NOT NULL'
+    );
 
     const participants = profiles.map((profile) => {
       const total = disbursements
@@ -480,30 +485,43 @@ router.post(
       participantId,
       disbursementId,
       amount,
+      method,
       senderBank,
       destAccount,
       transferredAt,
       referenceNo,
+      note,
       proofFileId,
       proofFileName,
     } = req.body;
-    if (!participantId || !disbursementId || !(amount > 0) || !senderBank || !destAccount || !referenceNo) {
+    if (!participantId || !(amount > 0) || !senderBank || !destAccount || !referenceNo) {
       throw new ApiError('Data bukti transfer tidak lengkap.');
+    }
+    if (method && method !== 'transfer' && method !== 'tunai') {
+      throw new ApiError('Metode pembayaran tidak valid.');
+    }
+    // Either tied to a real scholarship disbursement, or — for miscellaneous payments
+    // (transport/consumption for a training activity, Youth Cluster, etc.) that must NOT be
+    // counted as scholarship funds disbursed — a plain note describing what it's for.
+    if (!disbursementId && !(note && note.trim())) {
+      throw new ApiError('Pilih pencairan, atau isi keterangan untuk transaksi lainnya.');
     }
     const id = makeId('tp');
     await pool.query(
       `INSERT INTO transfer_proofs
-        (id, participant_id, disbursement_id, amount, sender_bank, dest_account, transferred_at, reference_no, proof_path, proof_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        (id, participant_id, disbursement_id, amount, method, sender_bank, dest_account, transferred_at, reference_no, note, proof_path, proof_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         participantId,
-        disbursementId,
+        disbursementId || null,
         amount,
+        method || 'transfer',
         senderBank,
         destAccount,
         transferredAt || new Date(),
         referenceNo,
+        note ? note.trim() : null,
         proofFileId || null,
         proofFileName || null,
       ]
