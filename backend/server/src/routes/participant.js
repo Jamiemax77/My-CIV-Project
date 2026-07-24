@@ -19,6 +19,24 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const router = express.Router();
 router.use(requireAuth, requireRole('participant'));
 
+// Defense-in-depth: the app UI already forces a PIN change before showing any other
+// screen (see RootNavigator's mustChangePin branch), but that's client-side only —
+// this blocks every other participant route server-side too, so a client that skips
+// the UI gate (or a modified/rogue client) can't ride the still-default 000000 PIN
+// into the rest of the API. /pin itself must stay reachable so the change can happen.
+router.use(
+  asyncHandler(async (req, res, next) => {
+    if (req.path === '/pin') return next();
+    const [rows] = await pool.query('SELECT must_change_pin FROM profiles WHERE id = ? LIMIT 1', [
+      req.session.profileId,
+    ]);
+    if (rows[0] && rows[0].must_change_pin) {
+      throw new ApiError('Anda wajib mengganti PIN default sebelum melanjutkan.', 403);
+    }
+    next();
+  })
+);
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 router.patch(

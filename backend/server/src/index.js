@@ -9,6 +9,12 @@ const fileRoutes = require('./routes/files');
 
 const app = express();
 
+// CloudPanel puts Nginx in front of this app, so req.ip/req.ips must come from the
+// X-Forwarded-For header it sets rather than the proxy's own socket address — otherwise
+// every request looks like it's from the same IP, which breaks per-IP rate limiting
+// (routes/auth.js) and would make express-rate-limit throw a startup validation error.
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
 

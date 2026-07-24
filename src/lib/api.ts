@@ -1,3 +1,5 @@
+import { useAuthStore } from '../store/authStore';
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export class ApiError extends Error {}
@@ -46,6 +48,16 @@ async function request<T>(
   }
 
   const res = await fetch(`${baseUrl}${path}`, { method, headers, body: requestBody });
+
+  // A 401 on a request that carried a token means the session itself was rejected
+  // (expired/invalid JWT, or the account got locked/disabled) — not a login-form
+  // wrong-PIN response, since those requests don't carry a token. Log out so
+  // RootNavigator's isAuthenticated check redirects to the login screen instead of
+  // leaving the user stuck on a screen that will fail forever.
+  if (res.status === 401 && token) {
+    useAuthStore.getState().logout();
+  }
+
   return parseEnvelope<T>(res);
 }
 
@@ -102,5 +114,10 @@ export async function uploadFile(
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(`${baseUrl}/files`, { method: 'POST', headers, body: formData });
+
+  if (res.status === 401 && token) {
+    useAuthStore.getState().logout();
+  }
+
   return parseEnvelope<UploadResult>(res);
 }

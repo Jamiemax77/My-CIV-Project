@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { RootNavigator } from './src/app/RootNavigator';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { queryClient } from './src/lib/queryClient';
 
 export default function App() {
@@ -16,11 +17,13 @@ export default function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <RootNavigator />
-        <StatusBar style="light" />
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <RootNavigator />
+          <StatusBar style="light" />
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

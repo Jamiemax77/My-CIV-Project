@@ -1,4 +1,5 @@
 const express = require('express');
+const rateLimit = require('express-rate-limit');
 const { pool } = require('../db');
 const { hashPin, verifyPin } = require('../lib/password');
 const { issueToken } = require('../lib/jwt');
@@ -11,8 +12,33 @@ const router = express.Router();
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
 
+// Per-account lockout (below) already blocks repeated guessing against one identifier;
+// these IP-based limits are the second layer — bound how many identifiers/PINs a single
+// source can try across *different* accounts, and stop /lookup from being used to mass-
+// enumerate valid emails/NIMs. Rejections reuse the ApiError JSON shape the client expects.
+const authRateLimitHandler = (req, res) => {
+  res.status(429).json({ ok: false, error: 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.' });
+};
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: authRateLimitHandler,
+});
+
+const lookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: authRateLimitHandler,
+});
+
 router.post(
   '/login',
+  loginLimiter,
   asyncHandler(async (req, res) => {
     const identifier = String(req.body.identifier || '').trim().toLowerCase();
     const pin = String(req.body.pin || '');
@@ -55,6 +81,7 @@ router.post(
 
 router.get(
   '/lookup',
+  lookupLimiter,
   asyncHandler(async (req, res) => {
     const identifier = String(req.query.identifier || '').trim().toLowerCase();
     if (!identifier) throw new ApiError('Identifier wajib diisi.');
