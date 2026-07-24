@@ -151,7 +151,7 @@ export function LoginScreen () {
   return (
     <KeyboardAvoidingView
       style={styles.screen}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ResponsiveContainer style={styles.content}>
         <View style={styles.logo}>

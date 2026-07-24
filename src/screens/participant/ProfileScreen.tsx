@@ -158,7 +158,8 @@ export function ProfileScreen () {
     {
       icon: 'help-circle-outline',
       iconBg: colors.skySoft,
-      label: 'Bantuan & FAQ'
+      label: 'Bantuan & FAQ',
+      onPress: () => navigation.navigate('HelpFaq')
     }
   ]
 

@@ -3,7 +3,16 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation } from '@react-navigation/native';
 import React, { useMemo, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { z } from 'zod';
 import { BankLogoBadge, EwalletLogoBadge } from '../../components/AccountLogoBadge';
 import { Button } from '../../components/Button';
@@ -165,10 +174,14 @@ export function AccountsScreen() {
   const submitting = addAccount.isPending || updateAccount.isPending;
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Header title="Rekening & E-Wallet" onBack={navigation.goBack} />
       <ScrollView
         contentContainerStyle={styles.body}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
@@ -422,7 +435,7 @@ export function AccountsScreen() {
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

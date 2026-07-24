@@ -8,6 +8,9 @@ import { colors, radius } from '../../theme'
 export function AboutScreen () {
   const navigation = useNavigation()
 
+  // 1. Tambahkan ini agar variabel currentYear tidak error
+  const currentYear = new Date().getFullYear()
+
   return (
     <View style={styles.screen}>
       <Header title='Tentang Aplikasi' onBack={navigation.goBack} />
@@ -74,6 +77,13 @@ export function AboutScreen () {
           </Text>
         </ResponsiveContainer>
       </ScrollView>
+
+      {/* 2. Gunakan simbol © langsung dan bungkus dengan View khusus footer */}
+      <View style={styles.footer}>
+        <Text style={styles.footerText}>
+          © {currentYear} My CIV Project. Hak Cipta Dilindungi.
+        </Text>
+      </View>
     </View>
   )
 }
@@ -120,5 +130,17 @@ const styles = StyleSheet.create({
   },
   lastParagraph: {
     marginBottom: 4
+  },
+  // 3. Style tambahan untuk area footer agar rapi
+  footer: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.bg
+  },
+  footerText: {
+    fontSize: 10,
+    color: colors.muted,
+    textAlign: 'center'
   }
 })

@@ -7,6 +7,7 @@ import { ChangePinScreen } from '../screens/participant/ChangePinScreen';
 import { EditProfileScreen } from '../screens/participant/EditProfileScreen';
 import { FullSemesterReportDetailScreen } from '../screens/participant/FullSemesterReportDetailScreen';
 import { FullSemesterReportScreen } from '../screens/participant/FullSemesterReportScreen';
+import { HelpFaqScreen } from '../screens/participant/HelpFaqScreen';
 import { TransferProofScreen } from '../screens/participant/TransferProofScreen';
 import { ParticipantTabParamList, ParticipantTabs } from './ParticipantTabs';
 
@@ -15,6 +16,7 @@ export type ParticipantStackParamList = {
   Accounts: undefined;
   TransferProof: { transferProofId: string };
   About: undefined;
+  HelpFaq: undefined;
   ChangePin: undefined;
   EditProfile: undefined;
   FullSemesterReport: undefined;
@@ -30,6 +32,7 @@ export function ParticipantStack() {
       <Stack.Screen name="Accounts" component={AccountsScreen} />
       <Stack.Screen name="TransferProof" component={TransferProofScreen} />
       <Stack.Screen name="About" component={AboutScreen} />
+      <Stack.Screen name="HelpFaq" component={HelpFaqScreen} />
       <Stack.Screen name="ChangePin" component={ChangePinScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="FullSemesterReport" component={FullSemesterReportScreen} />

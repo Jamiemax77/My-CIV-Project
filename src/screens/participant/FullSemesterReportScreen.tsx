@@ -6,6 +6,8 @@ import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
   Image,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -323,10 +325,14 @@ export function FullSemesterReportScreen() {
     Promise.all([refetchReports(), refetchKhs(), refetchCommitment()]);
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Header title="Laporan Semester Lengkap" onBack={navigation.goBack} />
       <ScrollView
         contentContainerStyle={styles.body}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={reportsRefetching}
@@ -834,7 +840,7 @@ export function FullSemesterReportScreen() {
         onSave={handleSaveAcademicInfo}
         onClose={() => setAcademicInfoModalOpen(false)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

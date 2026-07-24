@@ -3,7 +3,14 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import React from 'react'
 import { Controller, useForm } from 'react-hook-form'
-import { ScrollView, StyleSheet, Text, View } from 'react-native'
+import {
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View
+} from 'react-native'
 import { z } from 'zod'
 import { AdminStackParamList } from '../../app/AdminStack'
 import { Button } from '../../components/Button'
@@ -93,13 +100,19 @@ export function AddParticipantScreen () {
   }
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Header
         variant='admin'
         title='Tambah Partisipan'
         onBack={navigation.goBack}
       />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView
+        contentContainerStyle={styles.body}
+        keyboardShouldPersistTaps='handled'
+      >
         <ResponsiveContainer>
           <Controller
             control={control}
@@ -283,7 +296,7 @@ export function AddParticipantScreen () {
           />
         </ResponsiveContainer>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   )
 }
 

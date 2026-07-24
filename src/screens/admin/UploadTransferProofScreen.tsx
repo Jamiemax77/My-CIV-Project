@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 import { Button } from '../../components/Button';
 import { Chip, ChipGroup } from '../../components/Chip';
@@ -125,13 +125,16 @@ export function UploadTransferProofScreen() {
   const submitting = uploading || addTransferProof.isPending;
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Header
         variant="admin"
         title="Kirim Bukti Transfer"
         onBack={navigation.goBack}
       />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ResponsiveContainer>
         <Text style={styles.fieldLabel}>Kepada Partisipan</Text>
         <Controller
@@ -261,7 +264,7 @@ export function UploadTransferProofScreen() {
         />
         </ResponsiveContainer>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

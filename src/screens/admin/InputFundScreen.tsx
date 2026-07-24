@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 import { Button } from '../../components/Button';
 import { Chip, ChipGroup } from '../../components/Chip';
@@ -85,9 +85,12 @@ export function InputFundScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Header variant="admin" title="Input Dana Beasiswa" />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ResponsiveContainer>
         {isLoading ? (
           <Skeleton height={200} radiusSize={radius.lg} />
@@ -216,7 +219,7 @@ export function InputFundScreen() {
         )}
         </ResponsiveContainer>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

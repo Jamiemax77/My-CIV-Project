@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import React, { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
@@ -104,9 +104,12 @@ export function ReimbursementScreen() {
   const submitting = uploading || addReimbursement.isPending;
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Header title="Ajukan Pengembalian" />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ResponsiveContainer>
         <Text style={styles.label}>Jenis Pengajuan</Text>
         <Controller
@@ -244,7 +247,7 @@ export function ReimbursementScreen() {
         token={token}
         onClose={() => setPreviewTarget(null)}
       />
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

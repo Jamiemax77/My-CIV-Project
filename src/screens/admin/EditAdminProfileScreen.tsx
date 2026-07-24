@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 import { AdminStackParamList } from '../../app/AdminStack';
 import { AvatarPicker, PickedPhoto } from '../../components/AvatarPicker';
@@ -72,9 +72,12 @@ export function EditAdminProfileScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       <Header variant="admin" title="Edit Profil" onBack={navigation.goBack} />
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ResponsiveContainer>
           <View style={styles.avatarSection}>
             <AvatarPicker
@@ -151,7 +154,7 @@ export function EditAdminProfileScreen() {
           />
         </ResponsiveContainer>
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
