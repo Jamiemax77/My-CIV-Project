@@ -131,6 +131,26 @@ router.patch(
   })
 );
 
+router.patch(
+  '/academic',
+  asyncHandler(async (req, res) => {
+    const { major, university } = req.body;
+    if (!major || !major.trim()) throw new ApiError('Jurusan wajib diisi.');
+    if (!university || !university.trim()) throw new ApiError('Universitas wajib diisi.');
+
+    await pool.query('UPDATE profiles SET major = ?, university = ? WHERE id = ?', [
+      major.trim(),
+      university.trim(),
+      req.session.profileId,
+    ]);
+
+    const [rows] = await pool.query('SELECT * FROM profiles WHERE id = ? LIMIT 1', [
+      req.session.profileId,
+    ]);
+    res.json({ ok: true, data: { profile: profileToPublic(rows[0]) } });
+  })
+);
+
 router.get(
   '/reimbursements',
   asyncHandler(async (req, res) => {
@@ -264,7 +284,7 @@ router.post(
       [participantId, semNum]
     );
     const existing = existingRows[0];
-    if (existing && existing.status !== 'revision') {
+    if (existing && existing.status !== 'revision' && existing.status !== 'draft') {
       throw new ApiError('Laporan semester ini sudah dikirim dan tidak dapat diubah.');
     }
 
@@ -272,7 +292,7 @@ router.post(
       await pool.query(
         `UPDATE full_semester_reports
          SET year = ?, sks = ?, ips = ?, ipk = ?, cover_letter = ?, total_amount = ?, file_name = ?,
-             status = 'pending', reviewed_by = NULL, reviewed_at = NULL
+             status = 'draft', reviewed_by = NULL, reviewed_at = NULL
          WHERE id = ?`,
         [year || null, sks, ips, ipk, coverLetter.trim(), totalAmount, fileName, existing.id]
       );
@@ -282,11 +302,84 @@ router.post(
       await pool.query(
         `INSERT INTO full_semester_reports
           (id, participant_id, semester_number, year, sks, ips, ipk, cover_letter, total_amount, file_name, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
         [id, participantId, semNum, year || null, sks, ips, ipk, coverLetter.trim(), totalAmount, fileName]
       );
       res.status(201).json({ ok: true, data: { id } });
     }
+  })
+);
+
+router.post(
+  '/full-semester-reports/:id/submit',
+  asyncHandler(async (req, res) => {
+    const participantId = req.session.profileId;
+    const [rows] = await pool.query('SELECT * FROM full_semester_reports WHERE id = ? LIMIT 1', [
+      req.params.id,
+    ]);
+    const report = rows[0];
+    if (!report || report.participant_id !== participantId) {
+      throw new ApiError('Laporan semester tidak ditemukan.', 404);
+    }
+    if (report.status !== 'draft' && report.status !== 'revision') {
+      throw new ApiError('Laporan semester ini sudah dikirim.');
+    }
+
+    const [commitmentRows] = await pool.query(
+      'SELECT * FROM commitment_statements WHERE participant_id = ? LIMIT 1',
+      [participantId]
+    );
+    const commitment = commitmentRows[0];
+    const commitmentDone = !!(
+      commitment &&
+      commitment.participant_stmt_file_id &&
+      commitment.guardian_stmt_file_id
+    );
+    if (!commitmentDone) {
+      throw new ApiError('Lengkapi pernyataan komitmen partisipan dan orang tua/wali terlebih dahulu.');
+    }
+
+    const [khsRows] = await pool.query(
+      'SELECT id FROM khs_uploads WHERE participant_id = ? AND semester_number = ? LIMIT 1',
+      [participantId, report.semester_number]
+    );
+    if (khsRows.length === 0) {
+      throw new ApiError('Unggah KHS untuk semester ini terlebih dahulu.');
+    }
+
+    const [linkRows] = await pool.query(
+      'SELECT COUNT(*) AS cnt FROM report_activity_links WHERE report_id = ?',
+      [report.id]
+    );
+    if (Number(linkRows[0].cnt) < 5) {
+      throw new ApiError('Pilih minimal 5 Laporan Bulanan sebagai dokumentasi kegiatan.');
+    }
+
+    await pool.query(
+      "UPDATE full_semester_reports SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL WHERE id = ?",
+      [report.id]
+    );
+    res.json({ ok: true, data: { ok: true } });
+  })
+);
+
+router.patch(
+  '/full-semester-reports/:id/pdf',
+  asyncHandler(async (req, res) => {
+    const { fileId } = req.body;
+    if (!fileId) throw new ApiError('fileId wajib diisi.');
+    const [rows] = await pool.query('SELECT * FROM full_semester_reports WHERE id = ? LIMIT 1', [
+      req.params.id,
+    ]);
+    const report = rows[0];
+    if (!report || report.participant_id !== req.session.profileId) {
+      throw new ApiError('Laporan semester tidak ditemukan.', 404);
+    }
+    await pool.query('UPDATE full_semester_reports SET pdf_file_id = ? WHERE id = ?', [
+      fileId,
+      report.id,
+    ]);
+    res.json({ ok: true, data: { ok: true } });
   })
 );
 
@@ -408,6 +501,30 @@ router.post(
       [id, req.session.profileId, description.trim(), reportDate, fileId]
     );
     res.status(201).json({ ok: true, data: { id } });
+  })
+);
+
+router.patch(
+  '/monthly-reports/:id',
+  asyncHandler(async (req, res) => {
+    const [rows] = await pool.query('SELECT * FROM monthly_reports WHERE id = ? LIMIT 1', [
+      req.params.id,
+    ]);
+    const existing = rows[0];
+    if (!existing || existing.participant_id !== req.session.profileId) {
+      throw new ApiError('Laporan bulanan tidak ditemukan.', 404);
+    }
+
+    const { description, reportDate, fileId } = req.body;
+    if (!description || !description.trim()) throw new ApiError('Deskripsi aktivitas wajib diisi.');
+    if (!reportDate) throw new ApiError('Tanggal wajib diisi.');
+    if (!fileId) throw new ApiError('Berkas/foto wajib diunggah.');
+
+    await pool.query(
+      'UPDATE monthly_reports SET description = ?, report_date = ?, file_id = ? WHERE id = ?',
+      [description.trim(), reportDate, fileId, req.params.id]
+    );
+    res.json({ ok: true, data: { ok: true } });
   })
 );
 

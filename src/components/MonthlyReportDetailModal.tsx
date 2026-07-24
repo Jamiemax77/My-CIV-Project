@@ -18,6 +18,7 @@ type MonthlyReportDetailModalProps = {
   report: MonthlyReport | null;
   token: string | null;
   onClose: () => void;
+  onEdit?: () => void;
 };
 
 export function MonthlyReportDetailModal({
@@ -25,6 +26,7 @@ export function MonthlyReportDetailModal({
   report,
   token,
   onClose,
+  onEdit,
 }: MonthlyReportDetailModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -58,7 +60,14 @@ export function MonthlyReportDetailModal({
             </>
           ) : null}
 
-          <Button label="Tutup" variant="ghost" style={styles.closeBtn} onPress={onClose} />
+          {onEdit ? (
+            <View style={styles.btnRow}>
+              <Button label="Tutup" variant="ghost" style={styles.rowBtn} onPress={onClose} />
+              <Button label="Edit" variant="navy" style={styles.rowBtn} onPress={onEdit} />
+            </View>
+          ) : (
+            <Button label="Tutup" variant="ghost" style={styles.closeBtn} onPress={onClose} />
+          )}
         </View>
       </View>
     </Modal>
@@ -123,5 +132,14 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     marginTop: 8,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  rowBtn: {
+    flex: 1,
+    marginTop: 0,
   },
 });

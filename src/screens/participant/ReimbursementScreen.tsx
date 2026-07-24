@@ -61,11 +61,15 @@ export function ReimbursementScreen() {
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { type: 'reimburse', category: 'ukt', amount: '', description: '' },
   });
+
+  const categoryValue = watch('category');
 
   const onSubmit = async (values: FormValues) => {
     if (!file) {
@@ -112,13 +116,21 @@ export function ReimbursementScreen() {
             <ChipGroup>
               <Chip
                 label="Reimbursement"
-                active={field.value === 'reimburse'}
+                active={field.value === 'reimburse' && categoryValue !== 'lainnya'}
                 onPress={() => field.onChange('reimburse' as ReimbursementType)}
               />
               <Chip
                 label="Pengembalian Sisa"
                 active={field.value === 'return'}
                 onPress={() => field.onChange('return' as ReimbursementType)}
+              />
+              <Chip
+                label="Transaksi Lainnya"
+                active={field.value === 'reimburse' && categoryValue === 'lainnya'}
+                onPress={() => {
+                  field.onChange('reimburse' as ReimbursementType);
+                  setValue('category', 'lainnya');
+                }}
               />
             </ChipGroup>
           )}

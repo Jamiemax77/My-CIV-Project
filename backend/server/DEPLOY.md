@@ -16,6 +16,15 @@ link on the database page (Import tab → upload `schema.sql`), or via SSH:
 mysql -u civ_user -p civ_project < schema.sql
 ```
 
+If the database already exists from an earlier deploy, `schema.sql` alone
+won't apply changes to existing tables (`CREATE TABLE IF NOT EXISTS` is a
+no-op once the table's there) — run any new files under `migrations/` too,
+in order:
+
+```bash
+mysql -u civ_user -p civ_project < migrations/001_full_semester_report_draft_pdf.sql
+```
+
 ## 2. Create the site
 
 **Sites → Add Site → Node.js**. Pick a domain/subdomain (e.g.

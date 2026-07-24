@@ -24,7 +24,7 @@ import { useAuthStore } from '../../store/authStore'
 import { colors, radius } from '../../theme'
 import { UserProfile } from '../../types/models'
 
-const GENDER_LABEL: Record<'L' | 'P', string> = {
+export const GENDER_LABEL: Record<'L' | 'P', string> = {
   L: 'Laki-laki',
   P: 'Perempuan'
 }
@@ -53,6 +53,7 @@ export function ProfileScreen () {
   const updateNim = useUpdateNim()
   const [nimModalOpen, setNimModalOpen] = React.useState(false)
   const [refreshing, setRefreshing] = React.useState(false)
+  const [settingsOpen, setSettingsOpen] = React.useState(true)
   const initial = user?.fullName?.charAt(0) ?? '?'
 
   const onRefresh = React.useCallback(async () => {
@@ -239,20 +240,40 @@ export function ProfileScreen () {
             })}
           </Card>
 
-          <Text style={styles.sectionTitle}>Pengaturan</Text>
-          {menuItems.map(item => (
-            <Pressable
-              key={item.label}
-              style={styles.menuItem}
-              onPress={item.onPress}
-            >
-              <View style={[styles.menuIco, { backgroundColor: item.iconBg }]}>
-                <Ionicons name={item.icon} size={15} color={colors.navy} />
-              </View>
-              <Text style={styles.menuLabel}>{item.label}</Text>
-              <Ionicons name='chevron-forward' size={16} color={colors.muted} />
-            </Pressable>
-          ))}
+          <Pressable
+            style={styles.sectionHeader}
+            onPress={() => setSettingsOpen(o => !o)}
+          >
+            <Text style={styles.sectionTitle}>Pengaturan</Text>
+            <Ionicons
+              name={settingsOpen ? 'chevron-up' : 'chevron-down'}
+              size={16}
+              color={colors.muted}
+            />
+          </Pressable>
+          {settingsOpen ? (
+            <Card style={styles.menuCard}>
+              {menuItems.map(item => (
+                <Pressable
+                  key={item.label}
+                  style={styles.menuItem}
+                  onPress={item.onPress}
+                >
+                  <View
+                    style={[styles.menuIco, { backgroundColor: item.iconBg }]}
+                  >
+                    <Ionicons name={item.icon} size={15} color={colors.navy} />
+                  </View>
+                  <Text style={styles.menuLabel}>{item.label}</Text>
+                  <Ionicons
+                    name='chevron-forward'
+                    size={16}
+                    color={colors.muted}
+                  />
+                </Pressable>
+              ))}
+            </Card>
+          ) : null}
 
           <Button label='Keluar' variant='navy' onPress={logout} />
         </ResponsiveContainer>
@@ -342,7 +363,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: colors.navy,
+    color: colors.navy
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 10
   },
   infoCard: {
@@ -373,16 +399,14 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginTop: 1
   },
+  menuCard: {
+    marginBottom: 20
+  },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: 12,
-    marginBottom: 8
+    paddingVertical: 8
   },
   menuIco: {
     width: 30,

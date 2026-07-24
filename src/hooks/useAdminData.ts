@@ -143,6 +143,16 @@ export function useParticipantAccounts(participantId: string | undefined) {
   });
 }
 
+export function useParticipantMonthlyReports(participantId: string | undefined) {
+  const token = useToken();
+  return useQuery({
+    queryKey: ['participantMonthlyReports', participantId],
+    queryFn: () =>
+      api.get<MonthlyReport[]>(`/admin/participants/${participantId}/monthly-reports`, token),
+    enabled: !!token && !!participantId,
+  });
+}
+
 export function useAddDisbursement() {
   const token = useToken();
   const queryClient = useQueryClient();

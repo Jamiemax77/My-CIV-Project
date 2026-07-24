@@ -17,19 +17,22 @@ import {
 } from '../../hooks/useAdminData';
 import { buildFileUrl } from '../../lib/api';
 import { formatDate, formatRupiah } from '../../lib/format';
+import { openRemotePdf } from '../../lib/pdf';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
-import { ReportStatus } from '../../types/models';
+import { FullSemesterReportStatus } from '../../types/models';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
-const STATUS_LABEL: Record<ReportStatus, string> = {
+const STATUS_LABEL: Record<FullSemesterReportStatus, string> = {
+  draft: 'Draft',
   pending: 'Menunggu',
   verified: 'Terverifikasi',
   revision: 'Revisi',
 };
 
-const STATUS_BADGE: Record<ReportStatus, 'pending' | 'approved' | 'rejected'> = {
+const STATUS_BADGE: Record<FullSemesterReportStatus, 'pending' | 'approved' | 'rejected'> = {
+  draft: 'pending',
   pending: 'pending',
   verified: 'approved',
   revision: 'rejected',
@@ -49,6 +52,21 @@ export function VerifyFullSemesterReportDetailScreen() {
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
 
   const report = reports?.find((r) => r.id === params.reportId);
+  const [openingPdf, setOpeningPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  const handleOpenPdf = async () => {
+    if (!report?.pdfFileId) return;
+    setPdfError(null);
+    setOpeningPdf(true);
+    try {
+      await openRemotePdf(report.pdfFileId, token, `${report.fileName || 'laporan-semester'}.pdf`);
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : 'Gagal membuka laporan PDF.');
+    } finally {
+      setOpeningPdf(false);
+    }
+  };
 
   if (!report) {
     return (
@@ -85,6 +103,20 @@ export function VerifyFullSemesterReportDetailScreen() {
             </View>
             <Badge status={STATUS_BADGE[report.status]} label={STATUS_LABEL[report.status]} />
           </View>
+
+          {report.pdfFileId ? (
+            <>
+              <Button
+                label={openingPdf ? 'Membuka...' : 'Buka Laporan PDF'}
+                variant="ghost"
+                style={styles.pdfBtn}
+                disabled={openingPdf}
+                loading={openingPdf}
+                onPress={handleOpenPdf}
+              />
+              {pdfError ? <Text style={styles.pdfError}>{pdfError}</Text> : null}
+            </>
+          ) : null}
 
           <Text style={styles.sectionTitle}>Kata Pengantar</Text>
           <Card style={styles.gapBottom}>
@@ -244,6 +276,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.muted,
     marginTop: 2,
+  },
+  pdfBtn: {
+    marginBottom: 16,
+  },
+  pdfError: {
+    fontSize: 10,
+    color: colors.danger,
+    marginTop: -10,
+    marginBottom: 16,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: 12,

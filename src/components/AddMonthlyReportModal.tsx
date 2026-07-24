@@ -1,7 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
 import { colors, radius, spacing } from '../theme';
 import { Button } from './Button';
@@ -18,21 +19,30 @@ type FormValues = z.infer<typeof schema>;
 
 const defaultValues: FormValues = { description: '', reportDate: '' };
 
-export type NewMonthlyReportInput = FormValues & { file: UploadFile };
+export type NewMonthlyReportInput = FormValues & { file: UploadFile | null };
 
 type AddMonthlyReportModalProps = {
   visible: boolean;
+  mode?: 'create' | 'edit';
+  initialValues?: { description: string; reportDate: string; fileId?: string };
   saving?: boolean;
+  errorText?: string | null;
   onSave: (input: NewMonthlyReportInput) => void;
   onClose: () => void;
+  onDelete?: () => void;
 };
 
 export function AddMonthlyReportModal({
   visible,
+  mode = 'create',
+  initialValues,
   saving,
+  errorText,
   onSave,
   onClose,
+  onDelete,
 }: AddMonthlyReportModalProps) {
+  const isEdit = mode === 'edit';
   const [file, setFile] = React.useState<UploadFile | null>(null);
   const [fileError, setFileError] = React.useState<string | null>(null);
 
@@ -46,6 +56,19 @@ export function AddMonthlyReportModal({
     defaultValues,
   });
 
+  React.useEffect(() => {
+    if (visible) {
+      reset(
+        initialValues
+          ? { description: initialValues.description, reportDate: initialValues.reportDate }
+          : defaultValues
+      );
+      setFile(null);
+      setFileError(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
   const handleClose = () => {
     reset(defaultValues);
     setFile(null);
@@ -54,7 +77,7 @@ export function AddMonthlyReportModal({
   };
 
   const submit = (values: FormValues) => {
-    if (!file) {
+    if (!isEdit && !file) {
       setFileError('Unggah file/foto terlebih dahulu');
       return;
     }
@@ -64,11 +87,20 @@ export function AddMonthlyReportModal({
     setFile(null);
   };
 
+  const existingFileName = initialValues?.fileId?.split('__').pop();
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
         <View style={styles.card}>
-          <Text style={styles.title}>Buat Laporan Bulan Ini</Text>
+          <Text style={styles.title}>
+            {isEdit ? 'Edit Laporan Bulanan' : 'Buat Laporan Bulan Ini'}
+          </Text>
+          {isEdit && onDelete ? (
+            <Pressable style={styles.deleteIcon} onPress={onDelete} hitSlop={8}>
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+            </Pressable>
+          ) : null}
           <ScrollView showsVerticalScrollIndicator={false}>
             <Controller
               control={control}
@@ -99,9 +131,16 @@ export function AddMonthlyReportModal({
             />
 
             <Text style={styles.label}>Unggah File / Kamera</Text>
+            {isEdit && existingFileName ? (
+              <Text style={styles.currentFile} numberOfLines={1}>
+                File saat ini: {existingFileName}
+              </Text>
+            ) : null}
             <UploadBox
               mode="both"
-              subtitle="Kamera · Galeri · PDF (maks 5MB)"
+              subtitle={
+                isEdit ? 'Kosongkan untuk tetap pakai file lama · maks 5MB' : 'Kamera · Galeri · PDF (maks 5MB)'
+              }
               value={file}
               onChange={(f) => {
                 setFile(f);
@@ -109,9 +148,10 @@ export function AddMonthlyReportModal({
               }}
             />
             {fileError ? <Text style={styles.errorText}>{fileError}</Text> : null}
+            {errorText ? <Text style={styles.errorText}>{errorText}</Text> : null}
 
             <Button
-              label={saving ? 'Menyimpan...' : 'Simpan Laporan'}
+              label={saving ? 'Menyimpan...' : isEdit ? 'Simpan Perubahan' : 'Simpan Laporan'}
               variant="navy"
               onPress={handleSubmit(submit)}
               disabled={saving}
@@ -148,11 +188,21 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 14,
   },
+  deleteIcon: {
+    position: 'absolute',
+    top: spacing.xl - 4,
+    right: spacing.xl - 4,
+  },
   label: {
     fontSize: 11,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 8,
+  },
+  currentFile: {
+    fontSize: 10,
+    color: colors.muted,
+    marginBottom: 6,
   },
   errorText: {
     fontSize: 10,

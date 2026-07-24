@@ -28,6 +28,15 @@ export function useUpdateProfile() {
   });
 }
 
+export function useUpdateAcademicInfo() {
+  const token = useToken();
+  return useMutation({
+    mutationFn: (input: { major: string; university: string }) =>
+      api.patch<{ profile: UserProfile }>('/participant/academic', input, token),
+    onSuccess: ({ profile }) => useAuthStore.getState().updateUser(profile),
+  });
+}
+
 export function useUpdateNim() {
   const token = useToken();
   return useMutation({
@@ -99,6 +108,26 @@ export function useSubmitFullSemesterReport() {
   });
 }
 
+export function useFinalizeFullSemesterReport() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.post<{ ok: true }>(`/participant/full-semester-reports/${id}/submit`, {}, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+  });
+}
+
+export function useSaveFullSemesterReportPdf() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, fileId }: { id: string; fileId: string }) =>
+      api.patch<{ ok: true }>(`/participant/full-semester-reports/${id}/pdf`, { fileId }, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+  });
+}
+
 export function useKhsUploads() {
   const token = useToken();
   return useQuery({
@@ -158,6 +187,23 @@ export function useAddMonthlyReport() {
   return useMutation({
     mutationFn: (input: { description: string; reportDate: string; fileId: string }) =>
       api.post<{ id: string }>('/participant/monthly-reports', input, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['monthlyReports'] }),
+  });
+}
+
+export function useUpdateMonthlyReport() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...patch
+    }: {
+      id: string;
+      description: string;
+      reportDate: string;
+      fileId: string;
+    }) => api.patch<{ ok: true }>(`/participant/monthly-reports/${id}`, patch, token),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['monthlyReports'] }),
   });
 }

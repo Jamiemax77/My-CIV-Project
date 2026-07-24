@@ -16,15 +16,21 @@ import { Card } from '../../components/Card'
 import { ConfirmModal } from '../../components/ConfirmModal'
 import { EmptyState } from '../../components/EmptyState'
 import { Header } from '../../components/Header'
+import { ListItem } from '../../components/ListItem'
+import { MonthlyReportDetailModal } from '../../components/MonthlyReportDetailModal'
 import { ResponsiveContainer } from '../../components/ResponsiveContainer'
 import { ScholarshipTypeModal } from '../../components/ScholarshipTypeModal'
+import { Skeleton } from '../../components/Skeleton'
 import {
   useAdminParticipants,
+  useParticipantMonthlyReports,
   useResetParticipantPin,
   useSetScholarshipType
 } from '../../hooks/useAdminData'
-import { formatRupiah } from '../../lib/format'
+import { useAuthStore } from '../../store/authStore'
+import { formatDate, formatRupiah } from '../../lib/format'
 import { colors, radius } from '../../theme'
+import { MonthlyReport } from '../../types/models'
 
 const GENDER_LABEL: Record<'L' | 'P', string> = {
   L: 'Laki-laki',
@@ -48,9 +54,15 @@ export function ParticipantDetailScreen () {
   const { data: participants, refetch, isRefetching } = useAdminParticipants()
   const setScholarshipType = useSetScholarshipType()
   const resetPin = useResetParticipantPin()
+  const token = useAuthStore(s => s.token)
+  const {
+    data: monthlyReports,
+    isLoading: monthlyReportsLoading
+  } = useParticipantMonthlyReports(params.participantId)
   const [modalOpen, setModalOpen] = useState(false)
   const [resetPinConfirmOpen, setResetPinConfirmOpen] = useState(false)
   const [resetPinDone, setResetPinDone] = useState(false)
+  const [reportPreview, setReportPreview] = useState<MonthlyReport | null>(null)
 
   const item = participants?.find(p => p.profile.id === params.participantId)
 
@@ -195,6 +207,33 @@ export function ParticipantDetailScreen () {
             ))}
           </Card>
 
+          <Text style={styles.sectionTitle}>Laporan Bulanan</Text>
+          {monthlyReportsLoading ? (
+            <Skeleton height={54} radiusSize={radius.md} style={styles.infoCard} />
+          ) : !monthlyReports || monthlyReports.length === 0 ? (
+            <View style={styles.infoCard}>
+              <EmptyState
+                icon='document-text-outline'
+                title='Belum ada laporan bulanan'
+                subtitle='Partisipan ini belum mencatat aktivitas bulanan.'
+              />
+            </View>
+          ) : (
+            <View style={styles.infoCard}>
+              {monthlyReports.map(r => (
+                <ListItem
+                  key={r.id}
+                  icon='camera'
+                  iconBg={colors.skySoft}
+                  iconColor={colors.blue}
+                  title={formatDate(r.reportDate)}
+                  subtitle={r.description ?? '-'}
+                  onPress={() => setReportPreview(r)}
+                />
+              ))}
+            </View>
+          )}
+
           <Text style={styles.sectionTitle}>Keamanan</Text>
           <Button
             label='Reset PIN ke Default'
@@ -212,6 +251,13 @@ export function ParticipantDetailScreen () {
           ) : null}
         </ResponsiveContainer>
       </ScrollView>
+
+      <MonthlyReportDetailModal
+        visible={!!reportPreview}
+        report={reportPreview}
+        token={token}
+        onClose={() => setReportPreview(null)}
+      />
 
       <ScholarshipTypeModal
         visible={modalOpen}

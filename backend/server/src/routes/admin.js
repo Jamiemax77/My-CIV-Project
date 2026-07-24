@@ -305,6 +305,17 @@ router.get(
   })
 );
 
+router.get(
+  '/participants/:id/monthly-reports',
+  asyncHandler(async (req, res) => {
+    const [rows] = await pool.query(
+      'SELECT * FROM monthly_reports WHERE participant_id = ? ORDER BY report_date DESC, created_at DESC',
+      [req.params.id]
+    );
+    res.json({ ok: true, data: rows.map(monthlyReportToPublic) });
+  })
+);
+
 router.post(
   '/disbursements',
   asyncHandler(async (req, res) => {
@@ -382,6 +393,7 @@ router.get(
       `SELECT r.*, p.full_name AS participant_full_name, p.id_number AS participant_id_number
        FROM full_semester_reports r
        JOIN profiles p ON p.id = r.participant_id
+       WHERE r.status != 'draft'
        ORDER BY r.created_at DESC`
     );
     const [commitments] = await pool.query('SELECT * FROM commitment_statements');

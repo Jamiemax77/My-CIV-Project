@@ -16,7 +16,11 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.jamiemax777.mycivproject"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,6 +36,11 @@
         }
       ],
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "02729896-c357-4f09-a998-439e051602be"
+      }
+    }
   }
 }

@@ -63,6 +63,18 @@ function useDotStyle(delay: number) {
   }));
 }
 
+/** The 4th puzzle piece's icon — a small pinwheel of 4 diamonds, matching the app logo mark. */
+function DiamondCompass() {
+  return (
+    <View style={styles.compass}>
+      <View style={[styles.diamond, styles.diamondTop]} />
+      <View style={[styles.diamond, styles.diamondLeft]} />
+      <View style={[styles.diamond, styles.diamondRight]} />
+      <View style={[styles.diamond, styles.diamondBottom]} />
+    </View>
+  );
+}
+
 export function SplashScreen() {
   const cStyle = usePieceStyle(-ASSEMBLE_OFFSET, -ASSEMBLE_OFFSET);
   const iStyle = usePieceStyle(ASSEMBLE_OFFSET, -ASSEMBLE_OFFSET);
@@ -97,30 +109,30 @@ export function SplashScreen() {
       <View style={styles.puzzle}>
         <View style={styles.row}>
           <AnimatedGradient
-            colors={['#5e8bb0', '#4a7699']}
+            colors={['#3a0ca3', '#2e0b8c']}
             style={[styles.piece, cStyle]}
           >
-            <Text style={styles.pieceText}>C</Text>
+            <Text style={styles.pieceTextLight}>C</Text>
           </AnimatedGradient>
           <AnimatedGradient
-            colors={['#0e5fa4', '#0a4c86']}
+            colors={['#22ffff', '#00e5e5']}
             style={[styles.piece, iStyle]}
           >
-            <Text style={styles.pieceText}>I</Text>
+            <Text style={styles.pieceTextDark}>I</Text>
           </AnimatedGradient>
         </View>
         <View style={styles.row}>
           <AnimatedGradient
-            colors={['#1f49f5', '#1236c9']}
+            colors={['#a3a3ff', '#8c8cf5']}
             style={[styles.piece, vStyle]}
           >
-            <Text style={styles.pieceText}>V</Text>
+            <Text style={styles.pieceTextDark}>V</Text>
           </AnimatedGradient>
           <AnimatedGradient
-            colors={['#aeebff', '#7fd8f5']}
+            colors={['#ffcc00', '#ffb700']}
             style={[styles.piece, miniStyle]}
           >
-            <View style={styles.mini} />
+            <DiamondCompass />
           </AnimatedGradient>
         </View>
       </View>
@@ -165,16 +177,46 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     elevation: 6,
   },
-  pieceText: {
+  pieceTextLight: {
     fontSize: 42,
     fontWeight: '800',
     color: '#ffffff',
   },
-  mini: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255,255,255,0.33)',
+  pieceTextDark: {
+    fontSize: 42,
+    fontWeight: '800',
+    color: '#2e0b8c',
+  },
+  compass: {
+    width: 46,
+    height: 46,
+  },
+  diamond: {
+    position: 'absolute',
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    transform: [{ rotate: '45deg' }],
+  },
+  diamondTop: {
+    top: 0,
+    left: 12,
+    backgroundColor: '#22ffff',
+  },
+  diamondLeft: {
+    left: 0,
+    top: 12,
+    backgroundColor: '#2e0b8c',
+  },
+  diamondRight: {
+    right: 0,
+    top: 12,
+    backgroundColor: '#ff3b30',
+  },
+  diamondBottom: {
+    bottom: 0,
+    left: 12,
+    backgroundColor: '#a3a3ff',
   },
   brand: {
     alignItems: 'center',

@@ -1,8 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ParticipantStackParamList } from '../../app/ParticipantStack';
 import { AddMonthlyReportModal, NewMonthlyReportInput } from '../../components/AddMonthlyReportModal';
 import { Badge } from '../../components/Badge';
@@ -19,22 +18,25 @@ import {
   useDeleteMonthlyReport,
   useFullSemesterReports,
   useMonthlyReports,
+  useUpdateMonthlyReport,
 } from '../../hooks/useParticipantData';
 import { uploadFile } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
-import { MonthlyReport, ReportStatus } from '../../types/models';
+import { FullSemesterReportStatus, MonthlyReport } from '../../types/models';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
-const STATUS_LABEL: Record<ReportStatus, string> = {
+const STATUS_LABEL: Record<FullSemesterReportStatus, string> = {
+  draft: 'Draft',
   pending: 'Menunggu',
   verified: 'Terverifikasi',
   revision: 'Revisi',
 };
 
-const STATUS_BADGE: Record<ReportStatus, 'pending' | 'approved' | 'rejected'> = {
+const STATUS_BADGE: Record<FullSemesterReportStatus, 'pending' | 'approved' | 'rejected'> = {
+  draft: 'pending',
   pending: 'pending',
   verified: 'approved',
   revision: 'rejected',
@@ -52,16 +54,19 @@ export function ReportScreen() {
     isRefetching,
   } = useMonthlyReports();
   const addMonthlyReport = useAddMonthlyReport();
+  const updateMonthlyReport = useUpdateMonthlyReport();
   const deleteMonthlyReport = useDeleteMonthlyReport();
   const { data: fullSemesterReports } = useFullSemesterReports();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<MonthlyReport | null>(null);
   const [detailTarget, setDetailTarget] = useState<MonthlyReport | null>(null);
+  const [editTarget, setEditTarget] = useState<MonthlyReport | null>(null);
 
   const handleSaveMonthlyReport = async (input: NewMonthlyReportInput) => {
-    if (!user) return;
+    if (!user || !input.file) return;
     setSubmitError(null);
     try {
       const uploaded = await uploadFile(input.file, 'monthly-report', token, user.id);
@@ -76,11 +81,42 @@ export function ReportScreen() {
     }
   };
 
+  const handleUpdateMonthlyReport = async (input: NewMonthlyReportInput) => {
+    if (!user || !editTarget) return;
+    setEditError(null);
+    try {
+      let fileId = editTarget.fileId;
+      if (input.file) {
+        const uploaded = await uploadFile(input.file, 'monthly-report', token, user.id);
+        fileId = uploaded.fileId;
+      }
+      if (!fileId) {
+        setEditError('Berkas/foto wajib diunggah.');
+        return;
+      }
+      await updateMonthlyReport.mutateAsync({
+        id: editTarget.id,
+        description: input.description.trim(),
+        reportDate: input.reportDate,
+        fileId,
+      });
+      setEditTarget(null);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Gagal menyimpan perubahan laporan.');
+    }
+  };
+
   const confirmDelete = async () => {
     if (!deleteTarget) return;
     const target = deleteTarget;
     setDeleteTarget(null);
     await deleteMonthlyReport.mutateAsync(target.id);
+  };
+
+  const requestDeleteFromEdit = () => {
+    if (!editTarget) return;
+    setDeleteTarget(editTarget);
+    setEditTarget(null);
   };
 
   return (
@@ -114,8 +150,6 @@ export function ReportScreen() {
             onPress={() => navigation.navigate('FullSemesterReport')}
           />
 
-          {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
-
           <Text style={styles.sectionTitle}>Laporan Bulanan</Text>
           {isLoading ? (
             <View>
@@ -147,11 +181,6 @@ export function ReportScreen() {
                 title={formatDate(r.reportDate)}
                 subtitle={r.description ?? '-'}
                 onPress={() => setDetailTarget(r)}
-                right={
-                  <Pressable onPress={() => setDeleteTarget(r)} hitSlop={8}>
-                    <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                  </Pressable>
-                }
               />
             ))
           )}
@@ -183,6 +212,7 @@ export function ReportScreen() {
       <AddMonthlyReportModal
         visible={modalOpen}
         saving={addMonthlyReport.isPending}
+        errorText={submitError}
         onSave={handleSaveMonthlyReport}
         onClose={() => setModalOpen(false)}
       />
@@ -192,6 +222,30 @@ export function ReportScreen() {
         report={detailTarget}
         token={token}
         onClose={() => setDetailTarget(null)}
+        onEdit={() => {
+          setEditError(null);
+          setEditTarget(detailTarget);
+          setDetailTarget(null);
+        }}
+      />
+
+      <AddMonthlyReportModal
+        visible={!!editTarget}
+        mode="edit"
+        initialValues={
+          editTarget
+            ? {
+                description: editTarget.description ?? '',
+                reportDate: editTarget.reportDate,
+                fileId: editTarget.fileId,
+              }
+            : undefined
+        }
+        saving={updateMonthlyReport.isPending}
+        errorText={editError}
+        onSave={handleUpdateMonthlyReport}
+        onClose={() => setEditTarget(null)}
+        onDelete={requestDeleteFromEdit}
       />
 
       <ConfirmModal
@@ -225,11 +279,5 @@ const styles = StyleSheet.create({
   },
   gapTop: {
     marginTop: 20,
-  },
-  errorText: {
-    fontSize: 10,
-    color: colors.danger,
-    marginTop: 4,
-    textAlign: 'center',
   },
 });

@@ -108,6 +108,7 @@ function fullSemesterReportToPublic(row) {
       ? Number(row.total_amount)
       : undefined,
     fileName: row.file_name || undefined,
+    pdfFileId: row.pdf_file_id || undefined,
     status: row.status,
     createdAt: row.created_at,
     participantName: row.participant_full_name || undefined,

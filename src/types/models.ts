@@ -41,6 +41,8 @@ export type ReimbursementCategory =
   | 'lainnya';
 export type ReviewStatus = 'pending' | 'approved' | 'rejected';
 export type ReportStatus = 'pending' | 'verified' | 'revision';
+/** `FullSemesterReport`-only status: 'draft' precedes 'pending' while the participant is still assembling attachments. */
+export type FullSemesterReportStatus = 'draft' | ReportStatus;
 
 export interface Disbursement {
   id: string;
@@ -190,7 +192,8 @@ export interface FullSemesterReport {
   coverLetter?: string;
   totalAmount?: number;
   fileName?: string;
-  status: ReportStatus;
+  pdfFileId?: string;
+  status: FullSemesterReportStatus;
   createdAt: string;
   /** Only present on admin-facing list responses (joined server-side). */
   participantName?: string;

@@ -3,6 +3,7 @@ import React from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ParticipantStackParamList } from '../../app/ParticipantStack';
 import { Badge } from '../../components/Badge';
+import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
 import { Header } from '../../components/Header';
@@ -14,19 +15,22 @@ import {
 } from '../../hooks/useParticipantData';
 import { buildFileUrl } from '../../lib/api';
 import { formatDate, formatRupiah } from '../../lib/format';
+import { openRemotePdf } from '../../lib/pdf';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
-import { ReportStatus } from '../../types/models';
+import { FullSemesterReportStatus } from '../../types/models';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
-const STATUS_LABEL: Record<ReportStatus, string> = {
+const STATUS_LABEL: Record<FullSemesterReportStatus, string> = {
+  draft: 'Draft',
   pending: 'Menunggu',
   verified: 'Terverifikasi',
   revision: 'Revisi',
 };
 
-const STATUS_BADGE: Record<ReportStatus, 'pending' | 'approved' | 'rejected'> = {
+const STATUS_BADGE: Record<FullSemesterReportStatus, 'pending' | 'approved' | 'rejected'> = {
+  draft: 'pending',
   pending: 'pending',
   verified: 'approved',
   revision: 'rejected',
@@ -47,6 +51,21 @@ export function FullSemesterReportDetailScreen() {
 
   const report = reports?.find((r) => r.id === params.reportId);
   const linkedReports = (monthlyReports ?? []).filter((m) => linkedIds?.includes(m.id));
+  const [openingPdf, setOpeningPdf] = React.useState(false);
+  const [pdfError, setPdfError] = React.useState<string | null>(null);
+
+  const handleOpenPdf = async () => {
+    if (!report?.pdfFileId) return;
+    setPdfError(null);
+    setOpeningPdf(true);
+    try {
+      await openRemotePdf(report.pdfFileId, token, `${report.fileName || 'laporan-semester'}.pdf`);
+    } catch (err) {
+      setPdfError(err instanceof Error ? err.message : 'Gagal membuka laporan PDF.');
+    } finally {
+      setOpeningPdf(false);
+    }
+  };
 
   if (!report) {
     return (
@@ -79,6 +98,19 @@ export function FullSemesterReportDetailScreen() {
           <Text style={styles.sectionTitle}>Nama File</Text>
           <Card style={styles.gapBottom}>
             <Text style={styles.fileName}>{report.fileName}</Text>
+            {report.pdfFileId ? (
+              <>
+                <Button
+                  label={openingPdf ? 'Membuka...' : 'Buka Laporan PDF'}
+                  variant="ghost"
+                  style={styles.pdfBtn}
+                  disabled={openingPdf}
+                  loading={openingPdf}
+                  onPress={handleOpenPdf}
+                />
+                {pdfError ? <Text style={styles.errorText}>{pdfError}</Text> : null}
+              </>
+            ) : null}
           </Card>
 
           <Text style={styles.sectionTitle}>Kata Pengantar</Text>
@@ -192,6 +224,15 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text,
     lineHeight: 19,
+  },
+  pdfBtn: {
+    marginTop: 10,
+  },
+  errorText: {
+    fontSize: 10,
+    color: colors.danger,
+    marginTop: 4,
+    textAlign: 'center',
   },
   infoRow: {
     flexDirection: 'row',

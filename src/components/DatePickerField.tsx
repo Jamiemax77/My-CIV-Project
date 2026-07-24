@@ -20,10 +20,17 @@ function toDateOnly(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function parseValue(value: string): Date {
+  return new Date(value.includes('T') ? value : `${value}T00:00:00`);
+}
+
 function formatDisplay(value: string): string {
-  const date = new Date(`${value}T00:00:00`);
+  const date = parseValue(value);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = date.toLocaleDateString('id-ID', { month: 'short' }).replace('.', '');
+  const year = date.getFullYear();
+  return `${day} - ${month} - ${year}`;
 }
 
 export function DatePickerField({ label, value, onChange, error, maximumDate }: DatePickerFieldProps) {
@@ -49,7 +56,7 @@ export function DatePickerField({ label, value, onChange, error, maximumDate }: 
       {show ? (
         <>
           <DateTimePicker
-            value={value ? new Date(`${value}T00:00:00`) : new Date()}
+            value={value ? parseValue(value) : new Date()}
             mode="date"
             display={Platform.OS === 'ios' ? 'spinner' : 'default'}
             maximumDate={maximumDate}
