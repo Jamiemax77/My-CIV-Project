@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS disbursements (
   participant_id VARCHAR(40) NOT NULL,
   scholarship_id VARCHAR(40),
   title VARCHAR(255) NOT NULL,
+  program VARCHAR(50),
   amount DECIMAL(14, 2) NOT NULL,
   period VARCHAR(50),
   disbursed_at DATE,

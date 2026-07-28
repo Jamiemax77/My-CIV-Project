@@ -28,6 +28,7 @@ mysql -u civ_user -p civ_project < migrations/003_transfer_proof_method.sql
 mysql -u civ_user -p civ_project < migrations/004_pin_reset_requests.sql
 mysql -u civ_user -p civ_project < migrations/005_notifications.sql
 mysql -u civ_user -p civ_project < migrations/006_disbursement_sent_status.sql
+mysql -u civ_user -p civ_project < migrations/007_disbursement_program.sql
 ```
 
 ## 2. Create the site

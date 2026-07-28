@@ -362,8 +362,11 @@ router.get(
       data: rows.map((d) => ({
         id: d.id,
         title: d.title,
+        program: d.program || undefined,
+        period: d.period || undefined,
         amount: Number(d.amount),
         disbursedAt: d.disbursed_at,
+        note: d.note || undefined,
         status: d.status,
         hasProof: !!d.transfer_proof_id,
       })),
@@ -395,13 +398,23 @@ router.get(
 router.post(
   '/disbursements',
   asyncHandler(async (req, res) => {
-    const { participantId, title, amount, period, disbursedAt, note, status } = req.body;
+    const { participantId, title, program, amount, period, disbursedAt, note, status } = req.body;
     if (!participantId || !title || !(amount > 0)) throw new ApiError('Data pencairan tidak lengkap.');
     const id = makeId('d');
     await pool.query(
-      `INSERT INTO disbursements (id, participant_id, title, amount, period, disbursed_at, note, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, participantId, title, amount, period || null, disbursedAt || new Date(), note || null, status || 'disbursed']
+      `INSERT INTO disbursements (id, participant_id, title, program, amount, period, disbursed_at, note, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        participantId,
+        title,
+        program || null,
+        amount,
+        period || null,
+        disbursedAt || new Date(),
+        note || null,
+        status || 'disbursed',
+      ]
     );
 
     if ((status || 'disbursed') !== 'draft') {

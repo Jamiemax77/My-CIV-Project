@@ -52,8 +52,11 @@ export interface Disbursement {
   id: string;
   participantId: string;
   title: string;
+  program?: ScholarshipType;
+  period?: string;
   amount: number;
   disbursedAt: string;
+  note?: string;
   status: DisbursementStatus;
   hasProof: boolean;
 }

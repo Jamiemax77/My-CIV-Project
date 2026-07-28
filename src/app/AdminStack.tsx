@@ -2,6 +2,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { AddParticipantScreen } from '../screens/admin/AddParticipantScreen';
+import { ArchiveScreen } from '../screens/admin/ArchiveScreen';
 import { DisbursementScreen } from '../screens/admin/DisbursementScreen';
 import { EditAdminProfileScreen } from '../screens/admin/EditAdminProfileScreen';
 import { FundAllocationScreen } from '../screens/admin/FundAllocationScreen';
@@ -21,6 +22,7 @@ export type AdminStackParamList = {
   FundAllocation: undefined;
   VerifyFullSemesterReportDetail: { reportId: string };
   Notifications: undefined;
+  Archive: undefined;
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -39,6 +41,7 @@ export function AdminStack() {
         component={VerifyFullSemesterReportDetailScreen}
       />
       <Stack.Screen name="Notifications" component={NotificationScreen} />
+      <Stack.Screen name="Archive" component={ArchiveScreen} />
     </Stack.Navigator>
   );
 }

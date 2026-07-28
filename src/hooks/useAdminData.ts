@@ -185,6 +185,7 @@ export function useAddDisbursement() {
     mutationFn: (input: {
       participantId: string;
       title: string;
+      program?: string;
       amount: number;
       period?: string;
       disbursedAt?: string;

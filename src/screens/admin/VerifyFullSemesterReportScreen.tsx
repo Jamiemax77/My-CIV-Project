@@ -9,6 +9,7 @@ import { EmptyState } from '../../components/EmptyState';
 import { ReviewCard } from '../../components/ReviewCard';
 import { Skeleton } from '../../components/Skeleton';
 import { useAdminFullSemesterReports } from '../../hooks/useAdminData';
+import { useVerificationActExport } from '../../hooks/useVerificationActExport';
 import { formatDate, formatRupiah } from '../../lib/format';
 import { colors, radius } from '../../theme';
 import { ReportStatus } from '../../types/models';
@@ -25,6 +26,7 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
 export function VerifyFullSemesterReportScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const { data: reports, isLoading, isError, refetch } = useAdminFullSemesterReports();
+  const { exportingId, error: exportError, exportPdf, sharePdf } = useVerificationActExport();
   const [filter, setFilter] = useState<FilterKey>('pending');
 
   const pendingCount = useMemo(
@@ -33,6 +35,15 @@ export function VerifyFullSemesterReportScreen() {
   );
 
   const items = (reports ?? []).filter((r) => filter === 'all' || r.status === filter);
+
+  const actInputFor = (item: (typeof items)[number]) => ({
+    kind: 'Lengkap' as const,
+    category: `Semester ${item.semesterNumber}`,
+    amount: item.totalAmount,
+    date: item.createdAt,
+    decision: item.status === 'verified' ? ('Disetujui' as const) : ('Ditolak' as const),
+    participant: { fullName: item.participantName ?? '-', idNumber: item.participantIdNumber ?? '-' },
+  });
 
   if (isLoading) {
     return (
@@ -110,9 +121,17 @@ export function VerifyFullSemesterReportScreen() {
             onPress={() =>
               navigation.navigate('VerifyFullSemesterReportDetail', { reportId: item.id })
             }
+            onExportPdf={
+              item.status !== 'pending' ? () => exportPdf(item.id, actInputFor(item)) : undefined
+            }
+            onSharePdf={
+              item.status !== 'pending' ? () => sharePdf(item.id, actInputFor(item)) : undefined
+            }
+            exporting={exportingId === item.id}
           />
         ))}
       </View>
+      {exportError ? <Text style={styles.errorText}>{exportError}</Text> : null}
     </View>
   );
 }
@@ -125,5 +144,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: colors.navy,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.danger,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });

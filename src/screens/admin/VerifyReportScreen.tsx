@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Chip, ChipGroup } from '../../components/Chip';
@@ -8,9 +8,10 @@ import { FilePreviewModal } from '../../components/FilePreviewModal';
 import { ReviewCard } from '../../components/ReviewCard';
 import { Skeleton } from '../../components/Skeleton';
 import { useAdminReports, useReviewReport } from '../../hooks/useAdminData';
+import { useVerificationActExport } from '../../hooks/useVerificationActExport';
 import { formatDate } from '../../lib/format';
 import { useAuthStore } from '../../store/authStore';
-import { radius } from '../../theme';
+import { colors, radius } from '../../theme';
 import { ReportItem, ReportStatus } from '../../types/models';
 
 type FilterKey = 'all' | ReportStatus;
@@ -26,6 +27,7 @@ export function VerifyReportScreen() {
   const token = useAuthStore((s) => s.token);
   const { data: reports, isLoading, isError, refetch } = useAdminReports();
   const reviewReport = useReviewReport();
+  const { exportingId, error: exportError, exportPdf, sharePdf } = useVerificationActExport();
   const [filter, setFilter] = useState<FilterKey>('pending');
   const [previewTarget, setPreviewTarget] = useState<ReportItem | null>(null);
 
@@ -35,6 +37,14 @@ export function VerifyReportScreen() {
   );
 
   const items = (reports ?? []).filter((r) => filter === 'all' || r.status === filter);
+
+  const actInputFor = (item: ReportItem) => ({
+    kind: 'Laporan' as const,
+    category: `Semester ${item.semester}`,
+    date: item.createdAt,
+    decision: item.status === 'verified' ? ('Disetujui' as const) : ('Ditolak' as const),
+    participant: { fullName: item.participantName ?? '-', idNumber: item.participantIdNumber ?? '-' },
+  });
 
   if (isLoading) {
     return (
@@ -114,9 +124,17 @@ export function VerifyReportScreen() {
             readOnly={item.status !== 'pending'}
             onReject={() => reviewReport.mutate({ id: item.id, status: 'revision' })}
             onApprove={() => reviewReport.mutate({ id: item.id, status: 'verified' })}
+            onExportPdf={
+              item.status !== 'pending' ? () => exportPdf(item.id, actInputFor(item)) : undefined
+            }
+            onSharePdf={
+              item.status !== 'pending' ? () => sharePdf(item.id, actInputFor(item)) : undefined
+            }
+            exporting={exportingId === item.id}
           />
         ))}
       </View>
+      {exportError ? <Text style={styles.errorText}>{exportError}</Text> : null}
 
       <FilePreviewModal
         visible={!!previewTarget}
@@ -133,5 +151,11 @@ export function VerifyReportScreen() {
 const styles = StyleSheet.create({
   list: {
     marginTop: 16,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.danger,
+    marginTop: 4,
+    textAlign: 'center',
   },
 });

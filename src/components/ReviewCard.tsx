@@ -23,6 +23,10 @@ type ReviewCardProps = {
   onApprove?: () => void;
   onReject?: () => void;
   readOnly?: boolean;
+  /** Only meaningful once a decision exists (readOnly) — exports a Berita Acara Verifikasi PDF. */
+  onExportPdf?: () => void;
+  onSharePdf?: () => void;
+  exporting?: boolean;
 };
 
 export function ReviewCard({
@@ -39,6 +43,9 @@ export function ReviewCard({
   onApprove,
   onReject,
   readOnly,
+  onExportPdf,
+  onSharePdf,
+  exporting,
 }: ReviewCardProps) {
   return (
     <Pressable onPress={onPress} disabled={!onPress}>
@@ -93,6 +100,29 @@ export function ReviewCard({
           />
         </View>
       )}
+
+      {readOnly && (onExportPdf || onSharePdf) ? (
+        <View style={styles.btnRow}>
+          {onExportPdf ? (
+            <Button
+              label={exporting ? 'Membuat PDF...' : 'Export PDF'}
+              variant="ghost"
+              onPress={onExportPdf}
+              disabled={exporting}
+              style={styles.btn}
+            />
+          ) : null}
+          {onSharePdf ? (
+            <Button
+              label="Bagikan"
+              variant="ghost"
+              onPress={onSharePdf}
+              disabled={exporting}
+              style={styles.btn}
+            />
+          ) : null}
+        </View>
+      ) : null}
       </Card>
     </Pressable>
   );
@@ -112,12 +142,12 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   name: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 2,
   },
@@ -127,11 +157,11 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   rowLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
   },
   rowValue: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
   },
@@ -149,7 +179,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   docText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.blue,
     flexShrink: 1,
   },

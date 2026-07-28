@@ -23,9 +23,16 @@ import {
 } from '../../hooks/useAdminData';
 import { uploadFile } from '../../lib/api';
 import { formatAmountInput, formatDate, formatRupiah, parseAmountInput } from '../../lib/format';
+import {
+  generateDisbursementVoucherPdf,
+  generateTransferProofPdf,
+  shareOrDownloadPdf,
+  TransferProofPdfInput,
+} from '../../lib/pdf';
+import { useArchiveStore } from '../../store/archiveStore';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
-import { AccountItem, SCHOLARSHIP_TYPES } from '../../types/models';
+import { AccountItem, DisbursementStatus, SCHOLARSHIP_TYPES } from '../../types/models';
 
 const PERIODS = ['Genap 2025/2026', 'Ganjil 2025/2026'];
 
@@ -44,10 +51,15 @@ type Step = 'data' | 'transfer';
 type ActiveTarget = {
   disbursementId?: string;
   title: string;
+  program?: string;
+  period?: string;
   amount: number;
+  disbursedAt?: string;
+  status?: DisbursementStatus;
   note?: string;
   participantId: string;
   participantName: string;
+  participantIdNumber: string;
 };
 
 const dataSchema = z.object({
@@ -82,10 +94,17 @@ const transferSchema = z
   });
 type TransferFormValues = z.infer<typeof transferSchema>;
 
+type LastTransferProof = TransferProofPdfInput['proof'] & {
+  participant: TransferProofPdfInput['participant'];
+};
+
 export function DisbursementScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const route = useRoute<RouteProp<AdminStackParamList, 'Disbursement'>>();
   const token = useAuthStore((s) => s.token);
+  const currentAdmin = useAuthStore((s) => s.user);
+  const addArchiveEntry = useArchiveStore((s) => s.addEntry);
+  const markArchiveShared = useArchiveStore((s) => s.markShared);
   const { data: participants, isLoading: participantsLoading } = useAdminParticipants();
   const addDisbursement = useAddDisbursement();
   const addTransferProof = useAddTransferProof();
@@ -95,6 +114,10 @@ export function DisbursementScreen() {
     route.params?.initialMode === 'existing' ? 'existing' : 'new'
   );
   const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>(null);
+  const [lastTransferProof, setLastTransferProof] = useState<LastTransferProof | null>(null);
+  const [voucherExporting, setVoucherExporting] = useState(false);
+  const [transferPdfExporting, setTransferPdfExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // "existing" mode picks an already-created disbursement (or "+ Transaksi Lainnya") to attach
   // a transfer proof to, instead of creating a new one — plain state, not react-hook-form, since
@@ -169,13 +192,15 @@ export function DisbursementScreen() {
     const participant = participants?.find((p) => p.profile.id === values.participantId)?.profile;
     setSubmitError(null);
     const title = `Pencairan Semester ${values.period.split(' ')[0]}`;
+    const disbursedAt = new Date().toISOString().slice(0, 10);
     try {
       const result = await addDisbursement.mutateAsync({
         participantId: values.participantId,
         title,
+        program: values.program,
         amount: parseAmountInput(values.amount),
         period: values.period,
-        disbursedAt: new Date().toISOString().slice(0, 10),
+        disbursedAt,
         note: values.note,
         status: advance ? 'disbursed' : 'draft',
       });
@@ -183,9 +208,15 @@ export function DisbursementScreen() {
         setActiveTarget({
           disbursementId: result.id,
           title,
+          program: values.program,
+          period: values.period,
           amount: parseAmountInput(values.amount),
+          disbursedAt,
+          status: 'disbursed',
+          note: values.note,
           participantId: values.participantId,
           participantName: participant?.fullName ?? '-',
+          participantIdNumber: participant?.idNumber ?? '-',
         });
         setSavedMessage(null);
         setStep('transfer');
@@ -216,6 +247,7 @@ export function DisbursementScreen() {
         note: otherNote.trim(),
         participantId: existingParticipantId,
         participantName: participant?.fullName ?? '-',
+        participantIdNumber: participant?.idNumber ?? '-',
       });
       setStep('transfer');
       return;
@@ -228,9 +260,15 @@ export function DisbursementScreen() {
     setActiveTarget({
       disbursementId: picked.id,
       title: picked.title,
+      program: picked.program,
+      period: picked.period,
       amount: picked.amount,
+      disbursedAt: picked.disbursedAt,
+      status: picked.status,
+      note: picked.note,
       participantId: existingParticipantId,
       participantName: participant?.fullName ?? '-',
+      participantIdNumber: participant?.idNumber ?? '-',
     });
     setStep('transfer');
   };
@@ -268,6 +306,22 @@ export function DisbursementScreen() {
         proofFileName: uploaded.name,
       });
       setSavedMessage(`Bukti transfer terkirim ke ${activeTarget.participantName}.`);
+      // Snapshot before the fields below get cleared — the Bukti Transfer export/share
+      // buttons need this after activeTarget is nulled out for the next transaction.
+      setLastTransferProof({
+        participant: {
+          fullName: activeTarget.participantName,
+          idNumber: activeTarget.participantIdNumber,
+        },
+        disbursementTitle: isOther ? undefined : activeTarget.title,
+        amount,
+        method: values.method,
+        senderBank: values.method === 'tunai' ? TUNAI_SENDER_BANK : (values.senderBank ?? '').trim(),
+        destAccount: values.method === 'tunai' ? TUNAI_DEST_ACCOUNT : (values.destAccount ?? '').trim(),
+        referenceNo: values.referenceNo.trim(),
+        transferredAt: new Date().toISOString(),
+        proofFileName: uploaded.name,
+      });
       setFile(null);
       transferForm.reset({ method: 'transfer', senderBank: 'Bank Mandiri', destAccount: '', referenceNo: '', amount: '' });
       dataForm.reset({ participantId: '', program: SCHOLARSHIP_TYPES[0], period: PERIODS[0], amount: '', note: '' });
@@ -287,6 +341,76 @@ export function DisbursementScreen() {
 
   const submittingTransfer = uploading || addTransferProof.isPending;
   const canGoBack = navigation.canGoBack();
+
+  const exportVoucher = async (share: boolean) => {
+    if (!activeTarget?.disbursementId || !currentAdmin) return;
+    setExportError(null);
+    setVoucherExporting(true);
+    try {
+      const { uri, name } = await generateDisbursementVoucherPdf({
+        disbursement: {
+          title: activeTarget.title,
+          program: activeTarget.program,
+          period: activeTarget.period,
+          amount: activeTarget.amount,
+          disbursedAt: activeTarget.disbursedAt ?? new Date().toISOString(),
+          note: activeTarget.note,
+          status: activeTarget.status ?? 'disbursed',
+        },
+        participant: {
+          fullName: activeTarget.participantName,
+          idNumber: activeTarget.participantIdNumber,
+        },
+        admin: { fullName: currentAdmin.fullName, idNumber: currentAdmin.idNumber },
+      });
+      const entry = await addArchiveEntry({
+        type: 'voucher_pencairan',
+        fileName: name,
+        uri,
+        participantName: activeTarget.participantName,
+        participantIdNumber: activeTarget.participantIdNumber,
+        amount: activeTarget.amount,
+      });
+      if (share) {
+        await shareOrDownloadPdf(uri, name);
+        await markArchiveShared(entry.id);
+      }
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Gagal membuat PDF voucher.');
+    } finally {
+      setVoucherExporting(false);
+    }
+  };
+
+  const exportTransferProof = async (share: boolean) => {
+    if (!lastTransferProof || !currentAdmin) return;
+    setExportError(null);
+    setTransferPdfExporting(true);
+    try {
+      const { participant, ...proof } = lastTransferProof;
+      const { uri, name } = await generateTransferProofPdf({
+        proof,
+        participant,
+        admin: { fullName: currentAdmin.fullName, idNumber: currentAdmin.idNumber },
+      });
+      const entry = await addArchiveEntry({
+        type: 'bukti_transfer',
+        fileName: name,
+        uri,
+        participantName: participant.fullName,
+        participantIdNumber: participant.idNumber,
+        amount: proof.amount,
+      });
+      if (share) {
+        await shareOrDownloadPdf(uri, name);
+        await markArchiveShared(entry.id);
+      }
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Gagal membuat PDF bukti transfer.');
+    } finally {
+      setTransferPdfExporting(false);
+    }
+  };
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -389,6 +513,25 @@ export function DisbursementScreen() {
 
                   {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
                   {savedMessage ? <Text style={styles.success}>{savedMessage}</Text> : null}
+                  {exportError ? <Text style={styles.errorText}>{exportError}</Text> : null}
+                  {lastTransferProof ? (
+                    <View style={styles.btnRow}>
+                      <Button
+                        label={transferPdfExporting ? 'Membuat PDF...' : 'Export Bukti Transfer'}
+                        variant="ghost"
+                        style={styles.btn}
+                        disabled={transferPdfExporting}
+                        onPress={() => exportTransferProof(false)}
+                      />
+                      <Button
+                        label="Bagikan"
+                        variant="ghost"
+                        style={styles.btn}
+                        disabled={transferPdfExporting}
+                        onPress={() => exportTransferProof(true)}
+                      />
+                    </View>
+                  ) : null}
 
                   <View style={styles.btnRow}>
                     <Button
@@ -486,6 +629,26 @@ export function DisbursementScreen() {
                 ) : null}
                 {mode === 'existing' ? <Text style={styles.targetChange}>Ubah</Text> : null}
               </Pressable>
+
+              {!isOther ? (
+                <View style={styles.btnRow}>
+                  <Button
+                    label={voucherExporting ? 'Membuat PDF...' : 'Export Voucher'}
+                    variant="ghost"
+                    style={styles.btn}
+                    disabled={voucherExporting}
+                    onPress={() => exportVoucher(false)}
+                  />
+                  <Button
+                    label="Bagikan"
+                    variant="ghost"
+                    style={styles.btn}
+                    disabled={voucherExporting}
+                    onPress={() => exportVoucher(true)}
+                  />
+                </View>
+              ) : null}
+              {exportError ? <Text style={styles.errorText}>{exportError}</Text> : null}
 
               {isOther ? (
                 <View style={styles.gap}>

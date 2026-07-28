@@ -2,14 +2,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AdminStackParamList } from '../../app/AdminStack';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { Header } from '../../components/Header';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
-import { buildFileUrl } from '../../lib/api';
+import { useUnreadNotificationCount } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
 
@@ -25,6 +25,7 @@ export function AdminProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const token = useAuthStore((s) => s.token);
   const logout = useAuthStore((s) => s.logout);
+  const { data: unreadData } = useUnreadNotificationCount();
   const initial = user?.fullName?.charAt(0) ?? '?';
 
   const infoRows: InfoRow[] = [
@@ -42,8 +43,8 @@ export function AdminProfileScreen() {
         name={user?.fullName ?? '-'}
         roleTag="ADMIN"
         avatarInitial={initial}
-        avatarUri={user?.photoUrl ? buildFileUrl(user.photoUrl) : undefined}
-        avatarHeaders={token ? { Authorization: `Bearer ${token}` } : undefined}
+        avatarFileId={user?.photoUrl}
+        token={token}
         onAvatarPress={() => navigation.navigate('EditAdminProfile')}
       />
       <ScrollView contentContainerStyle={styles.body}>
@@ -66,6 +67,43 @@ export function AdminProfileScreen() {
             </View>
           ))}
         </Card>
+
+        <Text style={styles.sectionTitle}>Lainnya</Text>
+        <Pressable onPress={() => navigation.navigate('Notifications')}>
+          <Card style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIco}>
+                <Ionicons name="notifications-outline" size={15} color={colors.navy} />
+              </View>
+              <View style={styles.infoMain}>
+                <Text style={styles.infoV}>Notifikasi</Text>
+              </View>
+              {unreadData?.count ? (
+                <View style={styles.badgeDot}>
+                  <Text style={styles.badgeDotText}>
+                    {unreadData.count > 9 ? '9+' : unreadData.count}
+                  </Text>
+                </View>
+              ) : null}
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </View>
+          </Card>
+        </Pressable>
+
+        <Pressable onPress={() => navigation.navigate('Archive')}>
+          <Card style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIco}>
+                <Ionicons name="document-lock-outline" size={15} color={colors.navy} />
+              </View>
+              <View style={styles.infoMain}>
+                <Text style={styles.infoV}>Arsip Laporan (Cashier)</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </View>
+          </Card>
+        </Pressable>
+
         <Button
           label="Edit Profil"
           variant="ghost"
@@ -82,7 +120,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16 },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
@@ -106,13 +144,28 @@ const styles = StyleSheet.create({
   },
   infoMain: { flex: 1 },
   infoK: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
   },
   infoV: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
     marginTop: 1,
+  },
+  badgeDot: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
+  badgeDotText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });
