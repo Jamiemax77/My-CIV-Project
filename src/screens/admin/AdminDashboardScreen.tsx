@@ -15,7 +15,6 @@ import {
   useAdminStats,
   useFundSummary,
 } from '../../hooks/useAdminData';
-import { buildFileUrl } from '../../lib/api';
 import { formatRupiah } from '../../lib/format';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
@@ -59,8 +58,8 @@ export function AdminDashboardScreen() {
         name={user?.fullName ?? 'Staf PPA'}
         roleTag="ADMIN"
         avatarInitial={initial}
-        avatarUri={user?.photoUrl ? buildFileUrl(user.photoUrl) : undefined}
-        avatarHeaders={token ? { Authorization: `Bearer ${token}` } : undefined}
+        avatarFileId={user?.photoUrl}
+        token={token}
         onAvatarPress={() => navigation.navigate('EditAdminProfile')}
       />
       <ScrollView
@@ -135,7 +134,7 @@ export function AdminDashboardScreen() {
             <Button
               label="Kirim Bukti Transfer"
               variant="navy"
-              onPress={() => navigation.navigate('UploadTransferProof')}
+              onPress={() => navigation.navigate('Disbursement', { initialMode: 'existing' })}
               style={styles.transferBtn}
             />
           </>
@@ -175,11 +174,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   heroLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
   },
   heroValue: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: '#ffffff',
     marginTop: 4,
@@ -193,17 +192,17 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   heroStatLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: 'rgba(255,255,255,0.75)',
   },
   heroStatValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
     marginTop: 2,
   },
   heroSub: {
-    fontSize: 11,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.75)',
     marginTop: 10,
   },

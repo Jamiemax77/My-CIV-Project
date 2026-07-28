@@ -11,6 +11,7 @@ export { EmptyState } from './EmptyState';
 export { Field } from './Field';
 export { Header } from './Header';
 export { ListItem } from './ListItem';
+export { ParticipantPicker } from './ParticipantPicker';
 export { PinInput } from './PinInput';
 export { Receipt } from './Receipt';
 export { ResponsiveContainer } from './ResponsiveContainer';

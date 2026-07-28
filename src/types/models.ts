@@ -44,12 +44,18 @@ export type ReportStatus = 'pending' | 'verified' | 'revision';
 /** `FullSemesterReport`-only status: 'draft' precedes 'pending' while the participant is still assembling attachments. */
 export type FullSemesterReportStatus = 'draft' | ReportStatus;
 
+/** draft: saved but not yet disbursed. disbursed: money recorded as sent to the participant,
+ *  no proof attached yet. sent: a transfer proof has been sent for this disbursement. */
+export type DisbursementStatus = 'draft' | 'disbursed' | 'sent';
+
 export interface Disbursement {
   id: string;
   participantId: string;
   title: string;
   amount: number;
   disbursedAt: string;
+  status: DisbursementStatus;
+  hasProof: boolean;
 }
 
 export interface ReimbursementItem {
@@ -236,5 +242,45 @@ export interface MonthlyReport {
   description?: string;
   reportDate: string;
   fileId?: string;
+  createdAt: string;
+}
+
+export type PinResetRequestStatus = 'pending' | 'approved' | 'rejected';
+
+/** Submitted pre-login (participant identified by email/NIM, no session) with 3 selfies
+ * for admin to manually review before approving — see ForgotPinScreen/PinResetSelfieScreen. */
+export interface PinResetRequest {
+  id: string;
+  participantId: string;
+  status: PinResetRequestStatus;
+  selfieFrontFileId: string;
+  selfieLeftFileId: string;
+  selfieRightFileId: string;
+  createdAt: string;
+  reviewedAt?: string;
+}
+
+export type NotificationType =
+  | 'reimbursement_submitted'
+  | 'reimbursement_reviewed'
+  | 'report_submitted'
+  | 'report_reviewed'
+  | 'full_semester_report_submitted'
+  | 'full_semester_report_reviewed'
+  | 'disbursement_created'
+  | 'transfer_proof_created'
+  | 'scholarship_type_updated'
+  | 'pin_reset_requested'
+  | 'pin_reset_reviewed';
+
+/** In-app notification-center row. Most types are in-app-only; `pin_reset_requested`/
+ * `pin_reset_reviewed` additionally arrive as an OS push (the one time-sensitive case). */
+export interface AppNotification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  body?: string;
+  data?: Record<string, string>;
+  read: boolean;
   createdAt: string;
 }

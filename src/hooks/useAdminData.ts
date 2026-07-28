@@ -5,10 +5,13 @@ import {
   AdminParticipant,
   AdminStats,
   Disbursement,
+  DisbursementStatus,
   AccountItem,
   FullSemesterReport,
   FundSummary,
   MonthlyReport,
+  PinResetRequest,
+  PinResetRequestStatus,
   ReimbursementItem,
   ReportItem,
   ReviewStatus,
@@ -83,12 +86,26 @@ export function useSetScholarshipType() {
   });
 }
 
-export function useResetParticipantPin() {
+export function useParticipantPinResetRequests(participantId: string | undefined) {
+  const token = useToken();
+  return useQuery({
+    queryKey: ['participantPinResetRequests', participantId],
+    queryFn: () =>
+      api.get<PinResetRequest[]>(`/admin/participants/${participantId}/pin-reset-requests`, token),
+    enabled: !!token && !!participantId,
+  });
+}
+
+export function useReviewPinResetRequest() {
   const token = useToken();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.patch<{ ok: true }>(`/admin/participants/${id}/reset-pin`, {}, token),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminParticipants'] }),
+    mutationFn: ({ id, status }: { id: string; status: PinResetRequestStatus }) =>
+      api.post<{ ok: true }>(`/admin/pin-reset-requests/${id}/review`, { status }, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['participantPinResetRequests'] });
+      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] });
+    },
   });
 }
 
@@ -125,12 +142,19 @@ export function useAdminStats() {
   });
 }
 
-export function useParticipantDisbursements(participantId: string | undefined) {
+export function useParticipantDisbursements(
+  participantId: string | undefined,
+  options?: { needsProof?: boolean }
+) {
   const token = useToken();
+  const needsProof = options?.needsProof ?? false;
   return useQuery({
-    queryKey: ['participantDisbursements', participantId],
+    queryKey: ['participantDisbursements', participantId, needsProof],
     queryFn: () =>
-      api.get<Disbursement[]>(`/admin/participants/${participantId}/disbursements`, token),
+      api.get<Disbursement[]>(
+        `/admin/participants/${participantId}/disbursements${needsProof ? '?needsProof=1' : ''}`,
+        token
+      ),
     enabled: !!token && !!participantId,
   });
 }
@@ -165,6 +189,7 @@ export function useAddDisbursement() {
       period?: string;
       disbursedAt?: string;
       note?: string;
+      status?: Extract<DisbursementStatus, 'draft' | 'disbursed'>;
     }) => api.post<{ id: string }>('/admin/disbursements', input, token),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminParticipants'] });
@@ -266,6 +291,12 @@ export function useAddTransferProof() {
       proofFileId?: string;
       proofFileName?: string;
     }) => api.post<{ id: string }>('/admin/transfer-proofs', input, token),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['adminParticipants'] }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] });
+      queryClient.invalidateQueries({ queryKey: ['fundSummary'] });
+      queryClient.invalidateQueries({
+        queryKey: ['participantDisbursements', variables.participantId],
+      });
+    },
   });
 }

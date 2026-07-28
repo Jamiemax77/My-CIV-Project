@@ -4,7 +4,7 @@ import { BottomNav, BottomNavItem } from '../components/BottomNav';
 import { AdminDashboardScreen } from '../screens/admin/AdminDashboardScreen';
 import { AdminParticipantsScreen } from '../screens/admin/AdminParticipantsScreen';
 import { AdminProfileScreen } from '../screens/admin/AdminProfileScreen';
-import { InputFundScreen } from '../screens/admin/InputFundScreen';
+import { DisbursementScreen } from '../screens/admin/DisbursementScreen';
 import { VerificationScreen } from '../screens/admin/VerificationScreen';
 
 export type AdminTabParamList = {
@@ -39,7 +39,7 @@ export function AdminTabs() {
     >
       <Tab.Screen name="Dashboard" component={AdminDashboardScreen} />
       <Tab.Screen name="Partisipan" component={AdminParticipantsScreen} />
-      <Tab.Screen name="InputDana" component={InputFundScreen} />
+      <Tab.Screen name="InputDana" component={DisbursementScreen} />
       <Tab.Screen name="Verifikasi" component={VerificationScreen} />
       <Tab.Screen name="Profil" component={AdminProfileScreen} />
     </Tab.Navigator>

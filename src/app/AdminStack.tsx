@@ -2,21 +2,25 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { AddParticipantScreen } from '../screens/admin/AddParticipantScreen';
+import { DisbursementScreen } from '../screens/admin/DisbursementScreen';
 import { EditAdminProfileScreen } from '../screens/admin/EditAdminProfileScreen';
 import { FundAllocationScreen } from '../screens/admin/FundAllocationScreen';
 import { ParticipantDetailScreen } from '../screens/admin/ParticipantDetailScreen';
-import { UploadTransferProofScreen } from '../screens/admin/UploadTransferProofScreen';
 import { VerifyFullSemesterReportDetailScreen } from '../screens/admin/VerifyFullSemesterReportDetailScreen';
+import { NotificationScreen } from '../screens/NotificationScreen';
 import { AdminTabParamList, AdminTabs } from './AdminTabs';
 
 export type AdminStackParamList = {
   Tabs: NavigatorScreenParams<AdminTabParamList> | undefined;
-  UploadTransferProof: undefined;
+  /** Pushed from the Dashboard's "Kirim Bukti Transfer" shortcut — opens straight into
+   * attaching a proof to an already-disbursed entry instead of the "new" step. */
+  Disbursement: { initialMode?: 'existing' } | undefined;
   AddParticipant: undefined;
   ParticipantDetail: { participantId: string };
   EditAdminProfile: undefined;
   FundAllocation: undefined;
   VerifyFullSemesterReportDetail: { reportId: string };
+  Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -25,7 +29,7 @@ export function AdminStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={AdminTabs} />
-      <Stack.Screen name="UploadTransferProof" component={UploadTransferProofScreen} />
+      <Stack.Screen name="Disbursement" component={DisbursementScreen} />
       <Stack.Screen name="AddParticipant" component={AddParticipantScreen} />
       <Stack.Screen name="ParticipantDetail" component={ParticipantDetailScreen} />
       <Stack.Screen name="EditAdminProfile" component={EditAdminProfileScreen} />
@@ -34,6 +38,7 @@ export function AdminStack() {
         name="VerifyFullSemesterReportDetail"
         component={VerifyFullSemesterReportDetailScreen}
       />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
     </Stack.Navigator>
   );
 }
