@@ -59,6 +59,7 @@ export function ForgotPinScreen () {
           label='Email / Nomor ID'
           placeholder='nama@kampus.ac.id'
           autoCapitalize='none'
+          keyboardType='email-address'
           value={identifier}
           onChangeText={text => {
             setIdentifier(text)

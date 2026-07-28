@@ -103,6 +103,7 @@ export function LoginScreen () {
           label='Email / Nomor ID'
           placeholder='nama@kampus.ac.id'
           autoCapitalize='none'
+          keyboardType='email-address'
           value={field.value}
           onChangeText={text => {
             field.onChange(text)
