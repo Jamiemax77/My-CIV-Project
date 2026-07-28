@@ -2,10 +2,16 @@ import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
 
 export type UploadFile = { name: string; uri: string };
+
+const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'heic', 'heif'];
+function isImageFile(name: string): boolean {
+  const ext = name.split('.').pop()?.toLowerCase() ?? '';
+  return IMAGE_EXTENSIONS.includes(ext);
+}
 
 type UploadBoxProps = {
   mode?: 'both' | 'document';
@@ -117,7 +123,17 @@ export function UploadBox({
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      {value ? (
+      {value && isImageFile(value.name) ? (
+        <View style={styles.previewRow}>
+          <Image source={{ uri: value.uri }} style={styles.thumbnail} />
+          <Text style={styles.pillText} numberOfLines={1}>
+            {value.name}
+          </Text>
+          <Pressable onPress={() => onChange(null)} hitSlop={8}>
+            <Ionicons name="close" size={15} color={colors.muted} />
+          </Pressable>
+        </View>
+      ) : value ? (
         <View style={styles.pill}>
           <Ionicons name="document-attach" size={14} color={colors.blue} />
           <Text style={styles.pillText} numberOfLines={1}>
@@ -145,12 +161,12 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
   },
   subtitle: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
   },
   menu: {
@@ -171,12 +187,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   menuText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.navy,
   },
   error: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 4,
   },
@@ -195,8 +211,27 @@ const styles = StyleSheet.create({
     maxWidth: '100%',
   },
   pillText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     flexShrink: 1,
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.sm,
+    padding: 6,
+    marginTop: spacing.sm,
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+  },
+  thumbnail: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.sm - 2,
+    backgroundColor: colors.skySoft,
   },
 });

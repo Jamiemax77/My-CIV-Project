@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS disbursements (
 
 CREATE TABLE IF NOT EXISTS reimbursements (
   id VARCHAR(40) PRIMARY KEY,
+  nomor_pengajuan VARCHAR(30) NULL,
   participant_id VARCHAR(40) NOT NULL,
   type ENUM('reimburse', 'return') NOT NULL,
   category ENUM('ukt', 'buku', 'alat', 'lainnya') NOT NULL,
@@ -64,6 +65,8 @@ CREATE TABLE IF NOT EXISTS reimbursements (
   description TEXT,
   proof_path VARCHAR(500),
   proof_name VARCHAR(255),
+  usage_proof_path VARCHAR(500),
+  usage_proof_name VARCHAR(255),
   status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
   reviewed_by VARCHAR(40),
   reviewed_at DATETIME NULL,

@@ -63,13 +63,20 @@ export interface Disbursement {
 
 export interface ReimbursementItem {
   id: string;
+  /** Client-generated at Step 2 of the wizard (see lib/generateNomorPengajuan.ts), persisted
+   * as-is server-side — not a database-assigned sequence. */
+  nomorPengajuan?: string;
   participantId: string;
   type: ReimbursementType;
   category: ReimbursementCategory;
   amount: number;
   description: string;
+  /** Nota / Kwitansi. */
   proofFileId?: string;
   proofFileName: string;
+  /** Bukti barang / jasa / kegiatan yang dibiayai. */
+  usageProofFileId?: string;
+  usageProofFileName?: string;
   status: ReviewStatus;
   createdAt: string;
   /** Only present on admin-facing list responses (joined server-side). */

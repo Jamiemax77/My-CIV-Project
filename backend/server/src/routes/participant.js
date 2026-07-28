@@ -3,6 +3,7 @@ const { pool } = require('../db');
 const { makeId } = require('../lib/id');
 const { hashPin, verifyPin } = require('../lib/password');
 const { ApiError, asyncHandler } = require('../lib/errors');
+const { notifyAdmins } = require('../lib/notify');
 const {
   profileToPublic,
   reimbursementToPublic,
@@ -183,17 +184,58 @@ router.get(
 router.post(
   '/reimbursements',
   asyncHandler(async (req, res) => {
-    const { type, category, amount, description, proofFileId, proofFileName } = req.body;
-    if (!type || !category || !(amount > 0) || !description) {
+    const {
+      type,
+      category,
+      amount,
+      description,
+      nomorPengajuan,
+      proofFileId,
+      proofFileName,
+      usageProofFileId,
+      usageProofFileName,
+    } = req.body;
+    if (
+      !type ||
+      !category ||
+      !(amount > 0) ||
+      !description ||
+      !proofFileId ||
+      !usageProofFileId
+    ) {
       throw new ApiError('Data pengajuan tidak lengkap.');
     }
     const id = makeId('r');
     await pool.query(
       `INSERT INTO reimbursements
-        (id, participant_id, type, category, amount, description, proof_path, proof_name, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [id, req.session.profileId, type, category, amount, description, proofFileId || null, proofFileName || null]
+        (id, nomor_pengajuan, participant_id, type, category, amount, description,
+         proof_path, proof_name, usage_proof_path, usage_proof_name, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        id,
+        nomorPengajuan || null,
+        req.session.profileId,
+        type,
+        category,
+        amount,
+        description,
+        proofFileId,
+        proofFileName || null,
+        usageProofFileId,
+        usageProofFileName || null,
+      ]
     );
+
+    const [profileRows] = await pool.query('SELECT full_name FROM profiles WHERE id = ? LIMIT 1', [
+      req.session.profileId,
+    ]);
+    await notifyAdmins({
+      type: 'reimbursement_submitted',
+      title: 'Pengajuan pengembalian dana baru',
+      body: `${profileRows[0].full_name} mengajukan pengembalian dana yang perlu ditinjau.`,
+      data: { reimbursementId: id, participantId: req.session.profileId },
+    });
+
     res.status(201).json({ ok: true, data: { id } });
   })
 );
@@ -220,6 +262,17 @@ router.post(
        VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
       [id, req.session.profileId, semester, gpa, fileId || null, fileName || null]
     );
+
+    const [profileRows] = await pool.query('SELECT full_name FROM profiles WHERE id = ? LIMIT 1', [
+      req.session.profileId,
+    ]);
+    await notifyAdmins({
+      type: 'report_submitted',
+      title: 'Laporan nilai baru',
+      body: `${profileRows[0].full_name} mengirim laporan nilai yang perlu ditinjau.`,
+      data: { reportId: id, participantId: req.session.profileId },
+    });
+
     res.status(201).json({ ok: true, data: { id } });
   })
 );
@@ -377,6 +430,17 @@ router.post(
       "UPDATE full_semester_reports SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL WHERE id = ?",
       [report.id]
     );
+
+    const [profileRows] = await pool.query('SELECT full_name FROM profiles WHERE id = ? LIMIT 1', [
+      participantId,
+    ]);
+    await notifyAdmins({
+      type: 'full_semester_report_submitted',
+      title: 'Laporan Semester Lengkap baru',
+      body: `${profileRows[0].full_name} mengirim Laporan Semester Lengkap yang perlu ditinjau.`,
+      data: { reportId: report.id, participantId },
+    });
+
     res.json({ ok: true, data: { ok: true } });
   })
 );

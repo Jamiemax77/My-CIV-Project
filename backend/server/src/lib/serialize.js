@@ -21,6 +21,7 @@ function profileToPublic(row) {
 function reimbursementToPublic(row) {
   return {
     id: row.id,
+    nomorPengajuan: row.nomor_pengajuan || undefined,
     participantId: row.participant_id,
     type: row.type,
     category: row.category,
@@ -28,6 +29,8 @@ function reimbursementToPublic(row) {
     description: row.description,
     proofFileId: row.proof_path || undefined,
     proofFileName: row.proof_name,
+    usageProofFileId: row.usage_proof_path || undefined,
+    usageProofFileName: row.usage_proof_name || undefined,
     status: row.status,
     createdAt: row.created_at,
     participantName: row.participant_full_name || undefined,
@@ -152,6 +155,31 @@ function monthlyReportToPublic(row) {
   };
 }
 
+function pinResetRequestToPublic(row) {
+  return {
+    id: row.id,
+    participantId: row.participant_id,
+    status: row.status,
+    selfieFrontFileId: row.selfie_front_path,
+    selfieLeftFileId: row.selfie_left_path,
+    selfieRightFileId: row.selfie_right_path,
+    createdAt: row.created_at,
+    reviewedAt: row.reviewed_at || undefined,
+  };
+}
+
+function notificationToPublic(row) {
+  return {
+    id: row.id,
+    type: row.type,
+    title: row.title,
+    body: row.body || undefined,
+    data: row.data ? (typeof row.data === 'string' ? JSON.parse(row.data) : row.data) : undefined,
+    read: !!row.read_at,
+    createdAt: row.created_at,
+  };
+}
+
 module.exports = {
   profileToPublic,
   reimbursementToPublic,
@@ -163,4 +191,6 @@ module.exports = {
   khsUploadToPublic,
   commitmentStatementToPublic,
   monthlyReportToPublic,
+  pinResetRequestToPublic,
+  notificationToPublic,
 };

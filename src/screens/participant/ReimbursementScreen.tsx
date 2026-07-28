@@ -1,26 +1,22 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import React, { useState } from 'react';
-import { Controller, useForm } from 'react-hook-form';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { z } from 'zod';
+import React, { useReducer, useState } from 'react';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text } from 'react-native';
 import { Badge } from '../../components/Badge';
-import { Button } from '../../components/Button';
-import { Chip, ChipGroup } from '../../components/Chip';
 import { EmptyState } from '../../components/EmptyState';
-import { Field } from '../../components/Field';
 import { FilePreviewModal } from '../../components/FilePreviewModal';
 import { Header } from '../../components/Header';
 import { ListItem } from '../../components/ListItem';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { Skeleton } from '../../components/Skeleton';
-import { UploadBox, UploadFile } from '../../components/UploadBox';
 import { useAddReimbursement, useReimbursements } from '../../hooks/useParticipantData';
 import { uploadFile } from '../../lib/api';
-import { formatAmountInput, formatRupiah, parseAmountInput } from '../../lib/format';
+import { formatRupiah } from '../../lib/format';
+import { generateNomorPengajuan, JenisPengajuanKode } from '../../lib/generateNomorPengajuan';
 import { REIMBURSEMENT_CATEGORY_LABEL } from '../../lib/labels';
+import { FormPengajuan, FormPengajuanSubmitValues } from './reimbursement/FormPengajuan';
+import { StepPemilihan } from './reimbursement/StepPemilihan';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
-import { ReimbursementCategory, ReimbursementItem, ReimbursementType } from '../../types/models';
+import { ReimbursementCategory, ReimbursementItem } from '../../types/models';
 
 const STATUS_LABEL: Record<ReimbursementItem['status'], string> = {
   pending: 'Menunggu',
@@ -28,21 +24,45 @@ const STATUS_LABEL: Record<ReimbursementItem['status'], string> = {
   rejected: 'Ditolak',
 };
 
-const CATEGORIES = Object.entries(REIMBURSEMENT_CATEGORY_LABEL) as Array<
-  [ReimbursementCategory, string]
->;
+type WizardStep = 'pemilihan' | 'form';
 
-const schema = z.object({
-  type: z.enum(['reimburse', 'return']),
-  category: z.enum(['ukt', 'buku', 'alat', 'lainnya']),
-  amount: z
-    .string()
-    .min(1, 'Nominal wajib diisi')
-    .refine((v) => parseAmountInput(v) > 0, 'Nominal harus lebih dari 0'),
-  description: z.string().trim().min(5, 'Keterangan minimal 5 karakter'),
-});
+type WizardState = {
+  step: WizardStep;
+  jenis: JenisPengajuanKode | null;
+  kategori: ReimbursementCategory | null;
+  nomorPengajuan: string | null;
+};
 
-type FormValues = z.infer<typeof schema>;
+type WizardAction =
+  | { type: 'SET_JENIS'; jenis: JenisPengajuanKode }
+  | { type: 'SET_KATEGORI'; kategori: ReimbursementCategory }
+  | { type: 'BUAT_PENGAJUAN'; nomorPengajuan: string }
+  | { type: 'KEMBALI' }
+  | { type: 'RESET' };
+
+const initialState: WizardState = {
+  step: 'pemilihan',
+  jenis: null,
+  kategori: null,
+  nomorPengajuan: null,
+};
+
+function wizardReducer(state: WizardState, action: WizardAction): WizardState {
+  switch (action.type) {
+    case 'SET_JENIS':
+      // Changing jenis after a kategori was already picked doesn't invalidate it — Kategori
+      // is an independent pill, not a value scoped to a specific jenis.
+      return { ...state, jenis: action.jenis };
+    case 'SET_KATEGORI':
+      return { ...state, kategori: action.kategori };
+    case 'BUAT_PENGAJUAN':
+      return { ...state, step: 'form', nomorPengajuan: action.nomorPengajuan };
+    case 'KEMBALI':
+      return { ...state, step: 'pemilihan' };
+    case 'RESET':
+      return initialState;
+  }
+}
 
 export function ReimbursementScreen() {
   const user = useAuthStore((s) => s.user);
@@ -50,50 +70,48 @@ export function ReimbursementScreen() {
   const addReimbursement = useAddReimbursement();
   const { data: history, isLoading: historyLoading } = useReimbursements();
 
-  const [file, setFile] = useState<UploadFile | null>(null);
-  const [fileError, setFileError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  const [wizard, dispatch] = useReducer(wizardReducer, initialState);
+  const [creatingNomor, setCreatingNomor] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [previewTarget, setPreviewTarget] = useState<ReimbursementItem | null>(null);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { type: 'reimburse', category: 'ukt', amount: '', description: '' },
-  });
-
-  const categoryValue = watch('category');
-
-  const onSubmit = async (values: FormValues) => {
-    if (!file) {
-      setFileError('Unggah bukti terlebih dahulu');
-      return;
+  const onBuatPengajuan = async () => {
+    if (!wizard.jenis) return;
+    setCreatingNomor(true);
+    try {
+      const nomor = await generateNomorPengajuan(wizard.jenis);
+      dispatch({ type: 'BUAT_PENGAJUAN', nomorPengajuan: nomor });
+    } finally {
+      setCreatingNomor(false);
     }
-    if (!user) return;
-    setFileError(null);
-    setSubmitError(null);
+  };
 
+  const onSubmitForm = async (values: FormPengajuanSubmitValues) => {
+    if (!user || !wizard.jenis || !wizard.kategori) return;
+    setSubmitError(null);
+    setSuccessMessage(null);
     try {
       setUploading(true);
-      const uploaded = await uploadFile(file, 'reimbursement', token, user.id);
+      // NOTE(backend integration): two sequential multipart uploads against the existing
+      // POST /files endpoint, then one POST /participant/reimbursements carrying both
+      // resulting fileIds — see migration 008 for the usage_proof_* columns this relies on.
+      const uploadedProof = await uploadFile(values.proof, 'reimbursement', token, user.id);
+      const uploadedUsageProof = await uploadFile(values.usageProof, 'reimbursement', token, user.id);
       await addReimbursement.mutateAsync({
-        type: values.type,
-        category: values.category,
-        amount: parseAmountInput(values.amount),
-        description: values.description.trim(),
-        proofFileId: uploaded.fileId,
-        proofFileName: uploaded.name,
+        type: wizard.jenis === 'lainnya' ? 'reimburse' : wizard.jenis,
+        category: wizard.kategori,
+        amount: values.amount,
+        description: values.description,
+        nomorPengajuan: wizard.nomorPengajuan ?? undefined,
+        proofFileId: uploadedProof.fileId,
+        proofFileName: uploadedProof.name,
+        usageProofFileId: uploadedUsageProof.fileId,
+        usageProofFileName: uploadedUsageProof.name,
       });
-      reset({ type: values.type, category: values.category, amount: '', description: '' });
-      setFile(null);
-      setSubmitted(true);
+      setSuccessMessage(`Pengajuan ${wizard.nomorPengajuan} terkirim, menunggu verifikasi admin.`);
+      dispatch({ type: 'RESET' });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Gagal mengirim pengajuan.');
     } finally {
@@ -111,131 +129,52 @@ export function ReimbursementScreen() {
       <Header title="Ajukan Pengembalian" />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ResponsiveContainer>
-        <Text style={styles.label}>Jenis Pengajuan</Text>
-        <Controller
-          control={control}
-          name="type"
-          render={({ field }) => (
-            <ChipGroup>
-              <Chip
-                label="Reimbursement"
-                active={field.value === 'reimburse' && categoryValue !== 'lainnya'}
-                onPress={() => field.onChange('reimburse' as ReimbursementType)}
+          {wizard.step === 'pemilihan' ? (
+            <>
+              <StepPemilihan
+                jenis={wizard.jenis}
+                kategori={wizard.kategori}
+                onSelectJenis={(jenis) => dispatch({ type: 'SET_JENIS', jenis })}
+                onSelectKategori={(kategori) => dispatch({ type: 'SET_KATEGORI', kategori })}
+                onBuatPengajuan={onBuatPengajuan}
+                creating={creatingNomor}
               />
-              <Chip
-                label="Pengembalian Sisa"
-                active={field.value === 'return'}
-                onPress={() => field.onChange('return' as ReimbursementType)}
-              />
-              <Chip
-                label="Transaksi Lainnya"
-                active={field.value === 'reimburse' && categoryValue === 'lainnya'}
-                onPress={() => {
-                  field.onChange('reimburse' as ReimbursementType);
-                  setValue('category', 'lainnya');
-                }}
-              />
-            </ChipGroup>
-          )}
-        />
 
-        <View style={styles.fieldGap}>
-          <Text style={styles.fieldLabel}>Kategori</Text>
-          <Controller
-            control={control}
-            name="category"
-            render={({ field }) => (
-              <View style={styles.categoryRow}>
-                {CATEGORIES.map(([key, cat]) => (
-                  <Chip
-                    key={key}
-                    label={cat}
-                    active={field.value === key}
-                    onPress={() => field.onChange(key)}
+              {successMessage ? <Text style={styles.success}>{successMessage}</Text> : null}
+
+              <Text style={[styles.fieldLabel, styles.historyTitle]}>Riwayat Pengajuan</Text>
+              {historyLoading ? (
+                <Skeleton height={54} radiusSize={radius.md} />
+              ) : !history || history.length === 0 ? (
+                <EmptyState
+                  icon="receipt-outline"
+                  title="Belum ada pengajuan"
+                  subtitle="Riwayat klaim keuanganmu akan muncul di sini."
+                />
+              ) : (
+                history.map((item) => (
+                  <ListItem
+                    key={item.id}
+                    icon="receipt"
+                    iconBg={colors.skySoft}
+                    iconColor={colors.blue}
+                    title={`${item.nomorPengajuan ? `${item.nomorPengajuan} · ` : ''}${REIMBURSEMENT_CATEGORY_LABEL[item.category]} · ${formatRupiah(item.amount)}`}
+                    subtitle={item.description}
+                    onPress={() => setPreviewTarget(item)}
+                    right={<Badge status={item.status} label={STATUS_LABEL[item.status]} />}
                   />
-                ))}
-              </View>
-            )}
-          />
-        </View>
-
-        <Controller
-          control={control}
-          name="amount"
-          render={({ field }) => (
-            <Field
-              label="Nominal (Rp)"
-              keyboardType="numeric"
-              placeholder="0"
-              value={field.value}
-              onChangeText={(text) => field.onChange(formatAmountInput(text))}
-              error={errors.amount?.message}
+                ))
+              )}
+            </>
+          ) : (
+            <FormPengajuan
+              nomorPengajuan={wizard.nomorPengajuan ?? ''}
+              onKembali={() => dispatch({ type: 'KEMBALI' })}
+              onSubmit={onSubmitForm}
+              submitting={submitting}
+              submitError={submitError}
             />
           )}
-        />
-        <Controller
-          control={control}
-          name="description"
-          render={({ field }) => (
-            <Field
-              label="Keterangan"
-              multiline
-              placeholder="Jelaskan penggunaan dana"
-              value={field.value}
-              onChangeText={field.onChange}
-              error={errors.description?.message}
-            />
-          )}
-        />
-
-        <Text style={styles.fieldLabel}>Bukti (Nota / Kwitansi / Bukti Bayar)</Text>
-        <UploadBox
-          mode="both"
-          value={file}
-          onChange={(f) => {
-            setFile(f);
-            if (f) setFileError(null);
-          }}
-        />
-        {fileError ? <Text style={styles.errorText}>{fileError}</Text> : null}
-        {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
-
-        {submitted ? (
-          <Text style={styles.success}>
-            Pengajuan terkirim, menunggu verifikasi admin.
-          </Text>
-        ) : null}
-
-        <Button
-          label={submitting ? 'Mengirim...' : 'Kirim Pengajuan'}
-          onPress={handleSubmit(onSubmit)}
-          disabled={submitting}
-          loading={submitting}
-        />
-
-        <Text style={[styles.fieldLabel, styles.historyTitle]}>Riwayat Pengajuan</Text>
-        {historyLoading ? (
-          <Skeleton height={54} radiusSize={radius.md} />
-        ) : !history || history.length === 0 ? (
-          <EmptyState
-            icon="receipt-outline"
-            title="Belum ada pengajuan"
-            subtitle="Riwayat klaim keuanganmu akan muncul di sini."
-          />
-        ) : (
-          history.map((item) => (
-            <ListItem
-              key={item.id}
-              icon="receipt"
-              iconBg={colors.skySoft}
-              iconColor={colors.blue}
-              title={`${REIMBURSEMENT_CATEGORY_LABEL[item.category]} · ${formatRupiah(item.amount)}`}
-              subtitle={item.description}
-              onPress={() => setPreviewTarget(item)}
-              right={<Badge status={item.status} label={STATUS_LABEL[item.status]} />}
-            />
-          ))
-        )}
         </ResponsiveContainer>
       </ScrollView>
 
@@ -254,40 +193,20 @@ export function ReimbursementScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16 },
-  label: {
-    fontSize: 11,
+  fieldLabel: {
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 8,
-  },
-  fieldGap: {
-    marginTop: 16,
-    marginBottom: 13,
   },
   historyTitle: {
     marginTop: 24,
   },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.navy,
-    marginBottom: 8,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 7,
-  },
-  errorText: {
-    fontSize: 10,
-    color: colors.danger,
-    marginTop: 4,
-  },
   success: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.accent,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 16,
     marginBottom: 4,
     textAlign: 'center',
   },

@@ -72,8 +72,11 @@ export function useAddReimbursement() {
       category: ReimbursementCategory;
       amount: number;
       description: string;
+      nomorPengajuan?: string;
       proofFileId?: string;
       proofFileName?: string;
+      usageProofFileId?: string;
+      usageProofFileName?: string;
     }) => api.post<{ id: string }>('/participant/reimbursements', input, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['reimbursements'] });
