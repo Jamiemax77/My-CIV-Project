@@ -10,11 +10,13 @@ import { EmptyState } from '../../components/EmptyState';
 import { Header } from '../../components/Header';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import {
+  useBudgetItems,
   useFullSemesterReports,
   useMonthlyReports,
   useReportActivityLinks,
 } from '../../hooks/useParticipantData';
 import { formatDate, formatRupiah } from '../../lib/format';
+import { MONTHLY_REPORT_CATEGORY_LABEL } from '../../lib/labels';
 import { openRemotePdf } from '../../lib/pdf';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
@@ -48,6 +50,7 @@ export function FullSemesterReportDetailScreen() {
   const { data: reports } = useFullSemesterReports();
   const { data: monthlyReports } = useMonthlyReports();
   const { data: linkedIds } = useReportActivityLinks(params.reportId);
+  const { data: budgetItems } = useBudgetItems(params.reportId);
 
   const report = reports?.find((r) => r.id === params.reportId);
   const linkedReports = (monthlyReports ?? []).filter((m) => linkedIds?.includes(m.id));
@@ -124,8 +127,31 @@ export function FullSemesterReportDetailScreen() {
             <InfoRow label="SKS" value={report.sks !== undefined ? String(report.sks) : '-'} />
             <InfoRow label="IPS" value={report.ips !== undefined ? report.ips.toFixed(2) : '-'} />
             <InfoRow label="IPK" value={report.ipk !== undefined ? report.ipk.toFixed(2) : '-'} />
+          </Card>
+
+          <Text style={styles.sectionTitle}>Rincian Penggunaan Dana</Text>
+          <Card style={styles.gapBottom}>
+            {!budgetItems || budgetItems.length === 0 ? (
+              <EmptyState
+                icon="cash-outline"
+                title="Belum ada rincian"
+                subtitle="Laporan ini belum memiliki rincian penggunaan dana."
+              />
+            ) : (
+              budgetItems.map((item, i) => (
+                <View key={item.id} style={styles.budgetRow}>
+                  <Text style={styles.budgetKeterangan} numberOfLines={2}>
+                    {i + 1}. {item.keterangan}
+                  </Text>
+                  <Text style={styles.budgetDetail}>
+                    {item.unit} × {formatRupiah(item.satuan)} = {formatRupiah(item.jumlah)}
+                  </Text>
+                </View>
+              ))
+            )}
+            <InfoRow label="Kontribusi Orangtua/Wali" value={formatRupiah(report.kontribusiOrtu ?? 0)} />
             <InfoRow
-              label="Total Pengajuan"
+              label="Total Biaya CIV"
               value={report.totalAmount !== undefined ? formatRupiah(report.totalAmount) : '-'}
             />
           </Card>
@@ -138,6 +164,7 @@ export function FullSemesterReportDetailScreen() {
               label={`Laporan Kegiatan (${report.activityCount ?? 0}/5)`}
               done={!!report.checklist?.activities}
             />
+            <ChecklistRow label="Rincian Penggunaan Dana" done={!!report.checklist?.budget} />
           </Card>
 
           <Text style={styles.sectionTitle}>Catatan dan Dokumentasi</Text>
@@ -154,7 +181,9 @@ export function FullSemesterReportDetailScreen() {
                   <AuthImage fileId={m.fileId} token={token} style={styles.activityPhoto} />
                 ) : null}
                 <View style={styles.activityMain}>
-                  <Text style={styles.activityDate}>{formatDate(m.reportDate)}</Text>
+                  <Text style={styles.activityDate}>
+                    {formatDate(m.reportDate)} · {MONTHLY_REPORT_CATEGORY_LABEL[m.category]}
+                  </Text>
                   <Text style={styles.activityDesc} numberOfLines={2}>
                     {m.description}
                   </Text>
@@ -248,6 +277,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.text,
     marginRight: 8,
+  },
+  budgetRow: {
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderColor: colors.line,
+  },
+  budgetKeterangan: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  budgetDetail: {
+    fontSize: 12,
+    color: colors.muted,
+    marginTop: 2,
   },
   activityCard: {
     flexDirection: 'row',

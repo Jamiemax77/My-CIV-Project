@@ -8,9 +8,10 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } fr
 import { z } from 'zod';
 import { ParticipantStackParamList } from '../../app/ParticipantStack';
 import { AvatarPicker, PickedPhoto } from '../../components/AvatarPicker';
-import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
+import { Chip, ChipGroup } from '../../components/Chip';
+import { DatePickerField } from '../../components/DatePickerField';
 import { Field } from '../../components/Field';
 import { Header } from '../../components/Header';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
@@ -21,21 +22,32 @@ import { colors } from '../../theme';
 import { GENDER_LABEL } from './ProfileScreen';
 
 const schema = z.object({
+  fullName: z.string().trim().min(2, 'Nama wajib diisi'),
   email: z.string().trim().email('Email tidak valid'),
   phone: z.string().trim().optional(),
+  gender: z.enum(['L', 'P']).optional(),
+  semester: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || (Number.isInteger(Number(v)) && Number(v) > 0), 'Semester harus berupa angka'),
+  targetIpk: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => {
+      if (!v) return true;
+      const n = Number(v.replace(',', '.'));
+      return n > 0 && n <= 4;
+    }, 'Target IPK harus di antara 0 dan 4'),
+  targetGraduationDate: z.string().trim().optional(),
+  ppaCompletionDate: z.string().trim().optional(),
   university: z.string().trim().min(1, 'Universitas wajib diisi'),
   major: z.string().trim().min(1, 'Jurusan wajib diisi'),
   nim: z.string().trim().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
-
-type ReadOnlyRow = {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  value: string;
-  filled: boolean;
-};
 
 export function EditProfileScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ParticipantStackParamList>>();
@@ -56,8 +68,14 @@ export function EditProfileScreen() {
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      fullName: user?.fullName ?? '',
       email: user?.email ?? '',
       phone: user?.phone ?? '',
+      gender: user?.gender,
+      semester: user?.semester ? String(user.semester) : '',
+      targetIpk: user?.targetIpk !== undefined ? user.targetIpk.toFixed(2) : '',
+      targetGraduationDate: user?.targetGraduationDate ?? '',
+      ppaCompletionDate: user?.ppaCompletionDate ?? '',
       university: user?.university ?? '',
       major: user?.major ?? '',
       nim: user?.nim ?? '',
@@ -65,33 +83,6 @@ export function EditProfileScreen() {
   });
 
   const saving = updateProfile.isPending || updateAcademicInfo.isPending || updateNim.isPending;
-
-  const readOnlyRows: ReadOnlyRow[] = [
-    {
-      icon: 'id-card-outline',
-      label: 'Nomor ID',
-      value: user?.idNumber ?? '-',
-      filled: !!user?.idNumber,
-    },
-    {
-      icon: 'person-outline',
-      label: 'Nama',
-      value: user?.fullName ?? '-',
-      filled: !!user?.fullName,
-    },
-    {
-      icon: 'male-female-outline',
-      label: 'Jenis Kelamin',
-      value: user?.gender ? GENDER_LABEL[user.gender] : '-',
-      filled: !!user?.gender,
-    },
-    {
-      icon: 'school-outline',
-      label: 'Semester',
-      value: user?.semester ? `Semester ${user.semester}` : '-',
-      filled: !!user?.semester,
-    },
-  ];
 
   const onSubmit = async (values: FormValues) => {
     if (!user) return;
@@ -103,8 +94,14 @@ export function EditProfileScreen() {
         photoFileId = uploaded.fileId;
       }
       await updateProfile.mutateAsync({
+        fullName: values.fullName.trim(),
         email: values.email.trim(),
         phone: values.phone?.trim() || undefined,
+        gender: values.gender,
+        semester: values.semester ? Number(values.semester) : undefined,
+        targetIpk: values.targetIpk ? Number(values.targetIpk.replace(',', '.')) : undefined,
+        targetGraduationDate: values.targetGraduationDate || undefined,
+        ppaCompletionDate: values.ppaCompletionDate || undefined,
         photoFileId,
       });
       await updateAcademicInfo.mutateAsync({
@@ -143,23 +140,30 @@ export function EditProfileScreen() {
 
           <Text style={styles.sectionTitle}>Data Diri</Text>
           <Card style={styles.infoCard}>
-            {readOnlyRows.map((row) => (
-              <View key={row.label} style={styles.infoRow}>
-                <View style={styles.infoIco}>
-                  <Ionicons name={row.icon} size={15} color={colors.navy} />
-                </View>
-                <View style={styles.infoMain}>
-                  <Text style={styles.infoK}>{row.label}</Text>
-                  {row.filled ? (
-                    <Text style={styles.infoV}>{row.value}</Text>
-                  ) : (
-                    <Badge status="rejected" label="Belum diisi" />
-                  )}
-                </View>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIco}>
+                <Ionicons name="id-card-outline" size={15} color={colors.navy} />
               </View>
-            ))}
+              <View style={styles.infoMain}>
+                <Text style={styles.infoK}>Nomor ID</Text>
+                <Text style={styles.infoV}>{user?.idNumber ?? '-'}</Text>
+              </View>
+            </View>
           </Card>
 
+          <Controller
+            control={control}
+            name="fullName"
+            render={({ field }) => (
+              <Field
+                label="Nama Lengkap"
+                placeholder="nama lengkap"
+                value={field.value}
+                onChangeText={field.onChange}
+                error={errors.fullName?.message}
+              />
+            )}
+          />
           <Controller
             control={control}
             name="email"
@@ -188,6 +192,83 @@ export function EditProfileScreen() {
               />
             )}
           />
+          <Text style={[styles.fieldLabel, styles.gap]}>Jenis Kelamin</Text>
+          <Controller
+            control={control}
+            name="gender"
+            render={({ field }) => (
+              <ChipGroup>
+                <Chip
+                  label={GENDER_LABEL.L}
+                  active={field.value === 'L'}
+                  onPress={() => field.onChange('L')}
+                />
+                <Chip
+                  label={GENDER_LABEL.P}
+                  active={field.value === 'P'}
+                  onPress={() => field.onChange('P')}
+                />
+              </ChipGroup>
+            )}
+          />
+          {errors.gender ? <Text style={styles.errorText}>{errors.gender.message}</Text> : null}
+
+          <View style={styles.gap}>
+            <Controller
+              control={control}
+              name="semester"
+              render={({ field }) => (
+                <Field
+                  label="Semester"
+                  placeholder="cth: 5"
+                  keyboardType="numeric"
+                  value={field.value}
+                  onChangeText={field.onChange}
+                  error={errors.semester?.message}
+                />
+              )}
+            />
+          </View>
+
+          <Controller
+            control={control}
+            name="targetIpk"
+            render={({ field }) => (
+              <Field
+                label="Target IPK (saat lulus)"
+                placeholder="cth: 3.70"
+                keyboardType="decimal-pad"
+                value={field.value}
+                onChangeText={field.onChange}
+                error={errors.targetIpk?.message}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="targetGraduationDate"
+            render={({ field }) => (
+              <DatePickerField
+                label="Tanggal Lulus Kuliah"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                error={errors.targetGraduationDate?.message}
+              />
+            )}
+          />
+          <Controller
+            control={control}
+            name="ppaCompletionDate"
+            render={({ field }) => (
+              <DatePickerField
+                label="Tanggal Lulus PPA (Completion Date)"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                error={errors.ppaCompletionDate?.message}
+              />
+            )}
+          />
+
           <Controller
             control={control}
             name="university"
@@ -266,6 +347,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
+  },
+  fieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.navy,
+    marginBottom: 8,
+  },
+  gap: {
+    marginTop: 13,
   },
   infoCard: {
     marginBottom: 20,

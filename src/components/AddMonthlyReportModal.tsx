@@ -4,27 +4,42 @@ import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { z } from 'zod';
+import { MONTHLY_REPORT_CATEGORY_LABEL } from '../lib/labels';
 import { colors, radius, spacing } from '../theme';
+import { MonthlyReportCategory } from '../types/models';
 import { Button } from './Button';
+import { Chip, ChipGroup } from './Chip';
 import { DatePickerField } from './DatePickerField';
 import { Field } from './Field';
 import { UploadBox, UploadFile } from './UploadBox';
 
+const CATEGORIES: MonthlyReportCategory[] = ['kampus', 'ppa_cluster', 'mentoring'];
+
 const schema = z.object({
   description: z.string().trim().min(5, 'Deskripsi minimal 5 karakter'),
+  category: z.enum(['kampus', 'ppa_cluster', 'mentoring'], { message: 'Pilih kategori kegiatan' }),
   reportDate: z.string().trim().min(1, 'Tanggal wajib diisi'),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-const defaultValues: FormValues = { description: '', reportDate: '' };
+const defaultValues: FormValues = {
+  description: '',
+  category: undefined as unknown as FormValues['category'],
+  reportDate: '',
+};
 
 export type NewMonthlyReportInput = FormValues & { file: UploadFile | null };
 
 type AddMonthlyReportModalProps = {
   visible: boolean;
   mode?: 'create' | 'edit';
-  initialValues?: { description: string; reportDate: string; fileId?: string };
+  initialValues?: {
+    description: string;
+    category: MonthlyReportCategory;
+    reportDate: string;
+    fileId?: string;
+  };
   saving?: boolean;
   errorText?: string | null;
   onSave: (input: NewMonthlyReportInput) => void;
@@ -60,7 +75,11 @@ export function AddMonthlyReportModal({
     if (visible) {
       reset(
         initialValues
-          ? { description: initialValues.description, reportDate: initialValues.reportDate }
+          ? {
+              description: initialValues.description,
+              category: initialValues.category,
+              reportDate: initialValues.reportDate,
+            }
           : defaultValues
       );
       setFile(null);
@@ -116,6 +135,25 @@ export function AddMonthlyReportModal({
                 />
               )}
             />
+            <Text style={styles.label}>Kategori Kegiatan</Text>
+            <Controller
+              control={control}
+              name="category"
+              render={({ field }) => (
+                <ChipGroup>
+                  {CATEGORIES.map((cat) => (
+                    <Chip
+                      key={cat}
+                      label={MONTHLY_REPORT_CATEGORY_LABEL[cat]}
+                      active={field.value === cat}
+                      onPress={() => field.onChange(cat)}
+                    />
+                  ))}
+                </ChipGroup>
+              )}
+            />
+            {errors.category ? <Text style={styles.errorText}>{errors.category.message}</Text> : null}
+
             <Controller
               control={control}
               name="reportDate"

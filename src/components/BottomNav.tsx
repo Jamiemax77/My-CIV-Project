@@ -10,6 +10,8 @@ export type BottomNavItem = {
   key: string;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
+  /** Pending-count badge shown on the icon (e.g. items awaiting review). Omit/0 hides it. */
+  badge?: number;
 };
 
 type BottomNavProps = {
@@ -32,11 +34,18 @@ export function BottomNav({ items, activeKey, onChange }: BottomNavProps) {
             style={styles.item}
             hitSlop={6}
           >
-            <Ionicons
-              name={item.icon}
-              size={26}
-              color={active ? colors.navy : colors.muted}
-            />
+            <View style={styles.iconWrap}>
+              <Ionicons
+                name={item.icon}
+                size={26}
+                color={active ? colors.navy : colors.muted}
+              />
+              {item.badge ? (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{item.badge > 9 ? '9+' : item.badge}</Text>
+                </View>
+              ) : null}
+            </View>
             <Text style={[styles.label, active && styles.labelActive]}>
               {item.label}
             </Text>
@@ -59,6 +68,28 @@ const styles = StyleSheet.create({
   item: {
     alignItems: 'center',
     gap: 2,
+  },
+  iconWrap: {
+    position: 'relative',
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#ffffff',
   },
   label: {
     fontSize: 10,

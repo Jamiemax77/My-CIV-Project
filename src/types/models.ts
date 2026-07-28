@@ -26,6 +26,10 @@ export interface UserProfile {
   /** Jurusan / program studi. */
   major?: string;
   semester?: number;
+  /** Filled once by the participant, not per-report — same for every semester's printed report. */
+  targetIpk?: number;
+  targetGraduationDate?: string;
+  ppaCompletionDate?: string;
   /** One of SCHOLARSHIP_TYPES; a participant can only ever hold one. */
   scholarshipType?: ScholarshipType;
   photoUrl?: string;
@@ -201,6 +205,7 @@ export interface SemesterReportChecklist {
   commitment: boolean;
   khs: boolean;
   activities: boolean;
+  budget: boolean;
 }
 
 /** "Laporan Semester Lengkap" — a richer, separate report submitted per semester (cumulative academic table). */
@@ -213,7 +218,9 @@ export interface FullSemesterReport {
   ips?: number;
   ipk?: number;
   coverLetter?: string;
+  /** Derived from budget items minus kontribusiOrtu — see BudgetItem. Not directly editable. */
   totalAmount?: number;
+  kontribusiOrtu?: number;
   fileName?: string;
   pdfFileId?: string;
   status: FullSemesterReportStatus;
@@ -227,6 +234,17 @@ export interface FullSemesterReport {
   khsFileId?: string;
   commitmentParticipantFileId?: string;
   commitmentGuardianFileId?: string;
+}
+
+/** One "Rincian Penggunaan Dana" line item behind a FullSemesterReport's totalAmount. */
+export interface BudgetItem {
+  id: string;
+  reportId: string;
+  keterangan: string;
+  unit: number;
+  satuan: number;
+  jumlah: number;
+  sortOrder: number;
 }
 
 /** One semester's KHS upload (Semester I–VIII), cumulative and independent of any single report. */
@@ -246,11 +264,14 @@ export interface CommitmentStatement {
   guardianStmtFileId?: string;
 }
 
+export type MonthlyReportCategory = 'kampus' | 'ppa_cluster' | 'mentoring';
+
 /** "Laporan Bulanan" — a participant's personal, cumulative activity log. No admin review. */
 export interface MonthlyReport {
   id: string;
   participantId: string;
   description?: string;
+  category: MonthlyReportCategory;
   reportDate: string;
   fileId?: string;
   createdAt: string;

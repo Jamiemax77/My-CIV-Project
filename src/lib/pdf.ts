@@ -2,7 +2,16 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
-import { DisbursementStatus, FullSemesterReport, KhsUpload, MonthlyReport, UserProfile } from '../types/models';
+import {
+  BudgetItem,
+  DisbursementStatus,
+  FullSemesterReport,
+  KhsUpload,
+  MonthlyReport,
+  MonthlyReportCategory,
+  ReimbursementItem,
+  UserProfile,
+} from '../types/models';
 import { buildFileUrl, guessMimeType } from './api';
 import { isImageFileId } from './fileType';
 import { formatDate, formatRupiah } from './format';
@@ -129,13 +138,19 @@ export async function openRemotePdf(
  * renderer can't attach an Authorization header to an `<img src="...">` request the way
  * `AuthImage`/`openRemotePdf` do for on-screen previews, so embedding an image *inside* a
  * generated PDF needs the bytes inlined as base64 up front instead.
+ *
+ * The mime type is always derived from `fileId` itself (its `{category}__{participantId}__
+ * {uuid}__{originalName}` format preserves the real extension) rather than trusting a
+ * caller-supplied label — several call sites here pass a generic description ('dokumentasi',
+ * 'pernyataan-partisipan', ...) that has no extension, which previously made every one of
+ * those images embed as `application/octet-stream` and silently fail to render.
  */
-async function fetchFileAsDataUri(fileId: string, fileName: string, token: string | null): Promise<string> {
+async function fetchFileAsDataUri(fileId: string, token: string | null): Promise<string> {
   const localUri = `${FileSystem.cacheDirectory}${fileId}`;
   const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
   await FileSystem.downloadAsync(buildFileUrl(fileId), localUri, { headers });
   const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
-  return `data:${guessMimeType(fileName)};base64,${base64}`;
+  return `data:${guessMimeType(fileId)};base64,${base64}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -484,11 +499,11 @@ export async function generateReimbursementLaporanPdf(
   assertPdfGenerationSupported();
   const proofDataUri =
     input.proofFileId && isImageFileId(input.proofFileId)
-      ? await fetchFileAsDataUri(input.proofFileId, input.proofFileName ?? '', input.token)
+      ? await fetchFileAsDataUri(input.proofFileId, input.token)
       : null;
   const usageProofDataUri =
     input.usageProofFileId && isImageFileId(input.usageProofFileId)
-      ? await fetchFileAsDataUri(input.usageProofFileId, input.usageProofFileName ?? '', input.token)
+      ? await fetchFileAsDataUri(input.usageProofFileId, input.token)
       : null;
   const docNumber = generateDocNumber('LPD');
   const html = buildReimbursementLaporanHtml(input, proofDataUri, usageProofDataUri, docNumber);
@@ -564,6 +579,18 @@ const LSL_STYLE = `
   .doc-table th { background: #e6f7ff; color: #06345c; }
   .doc-table .no-col { width: 28px; text-align: center; }
   .doc-thumb { width: 110px; height: 110px; object-fit: cover; border-radius: 4px; }
+  .budget-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .budget-table th, .budget-table td { border: 1px solid #dde6ef; padding: 6px; text-align: left; }
+  .budget-table th { background: #e6f7ff; color: #06345c; }
+  .budget-total-label { text-align: right; font-weight: 700; color: #06345c; }
+  .budget-total-value { font-weight: 700; }
+  .budget-total-final { font-size: 12px; background: #e6f7ff; }
+  .riwayat-table { width: 100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }
+  .riwayat-table td { border: 1px solid #dde6ef; padding: 5px 6px; text-align: center; }
+  .riwayat-meta-label { background: #06345c; color: #ffffff; font-weight: 700; text-align: left !important; }
+  .riwayat-meta-value { text-align: left !important; }
+  .riwayat-label-cell { font-weight: 700; color: #06345c; text-align: left !important; width: 60px; }
+  .riwayat-head-cell { background: #f6b989; font-weight: 700; color: #06345c; }
 `;
 
 function checkbox(done: boolean | undefined): string {
@@ -585,25 +612,124 @@ export type FullSemesterReportAdminPdfInput = {
   history: FullSemesterReport[];
   /** Every KHS/KRS upload the participant has, any semester, sorted ascending — Lembar 4+. */
   khsUploads: KhsUpload[];
-  /** Linked documentation photos for this specific report — the last sheet's table. */
+  /** Linked documentation photos for this specific report — split into 3 category tables. */
   activities: MonthlyReport[];
-  participant: PersonRef;
+  /** "Rincian Penggunaan Dana" line items behind this report's total_amount. */
+  budgetItems: BudgetItem[];
+  /** Approved reimbursements from this semester's reporting window — "Lampiran Nota & Kwitansi". */
+  reimbursements: ReimbursementItem[];
+  participant: PersonRef & {
+    major?: string;
+    university?: string;
+    targetIpk?: number;
+    targetGraduationDate?: string;
+    ppaCompletionDate?: string;
+  };
   admin: PersonRef;
   token: string | null;
 };
+
+/** Matches the paper "Laporan Semester Lengkap" form — a fixed Semester 1-10 grid, printed in
+ * full even for semesters the participant hasn't reported yet, rather than only listing rows
+ * for semesters actually submitted. */
+const RIWAYAT_SEMESTER_COUNT = 10;
+
+function buildRiwayatTableHtml(
+  history: FullSemesterReport[],
+  major: string | undefined,
+  university: string | undefined
+): string {
+  const reportBySemester = new Map(history.map((r) => [r.semesterNumber, r]));
+  const semesters = Array.from({ length: RIWAYAT_SEMESTER_COUNT }, (_, i) => i + 1);
+
+  const rowValues = (pick: (r: FullSemesterReport) => string | undefined) =>
+    semesters
+      .map((sem) => {
+        const r = reportBySemester.get(sem);
+        const value = r ? pick(r) : undefined;
+        return `<td>${value !== undefined ? escapeHtml(value) : '-'}</td>`;
+      })
+      .join('');
+
+  return `<table class="riwayat-table">
+    <tr>
+      <td class="riwayat-meta-label" style="width:70px;">JURUSAN :</td>
+      <td class="riwayat-meta-value" colspan="4">${escapeHtml(major || '-')}</td>
+      <td class="riwayat-meta-label" style="width:90px;">UNIVERSITAS :</td>
+      <td class="riwayat-meta-value" colspan="5">${escapeHtml(university || '-')}</td>
+    </tr>
+    <tr>
+      <td class="riwayat-label-cell riwayat-head-cell">Semester</td>
+      ${semesters.map((sem) => `<td class="riwayat-head-cell">${sem}</td>`).join('')}
+    </tr>
+    <tr>
+      <td class="riwayat-label-cell">Tahun</td>
+      ${rowValues((r) => r.year)}
+    </tr>
+    <tr>
+      <td class="riwayat-label-cell">SKS</td>
+      ${rowValues((r) => (r.sks !== undefined ? String(r.sks) : undefined))}
+    </tr>
+    <tr>
+      <td class="riwayat-label-cell">IPS</td>
+      ${rowValues((r) => (r.ips !== undefined ? r.ips.toFixed(2) : undefined))}
+    </tr>
+    <tr>
+      <td class="riwayat-label-cell">IPK</td>
+      ${rowValues((r) => (r.ipk !== undefined ? r.ipk.toFixed(2) : undefined))}
+    </tr>
+  </table>`;
+}
+
+const ACTIVITY_CATEGORY_TITLE: Record<MonthlyReportCategory, string> = {
+  kampus: 'Catatan dan Dokumentasi Kegiatan Kampus',
+  ppa_cluster: 'Catatan dan Dokumentasi Kegiatan di PPA & Cluster',
+  mentoring: 'Catatan dan Dokumentasi Kegiatan Mentoring',
+};
+
+function buildBudgetTableHtml(items: BudgetItem[], kontribusiOrtu: number, totalAmount: number): string {
+  const jumlahKebutuhan = items.reduce((sum, item) => sum + item.jumlah, 0);
+  const rows = items
+    .map(
+      (item, i) => `<tr>
+        <td class="no-col">${i + 1}</td>
+        <td>${escapeHtml(item.keterangan)}</td>
+        <td>${item.unit}</td>
+        <td>${escapeHtml(formatRupiah(item.satuan))}</td>
+        <td>${escapeHtml(formatRupiah(item.jumlah))}</td>
+      </tr>`
+    )
+    .join('');
+  return `<table class="budget-table">
+    <thead><tr><th class="no-col">No</th><th>Keterangan</th><th>Unit</th><th>Satuan</th><th>Jumlah</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="5" class="muted">Belum ada rincian.</td></tr>'}</tbody>
+    <tfoot>
+      <tr><td colspan="4" class="budget-total-label">Jumlah Kebutuhan</td><td class="budget-total-value">${escapeHtml(formatRupiah(jumlahKebutuhan))}</td></tr>
+      <tr><td colspan="4" class="budget-total-label">Kontribusi Orangtua/Wali</td><td class="budget-total-value">${escapeHtml(formatRupiah(kontribusiOrtu))}</td></tr>
+      <tr><td colspan="4" class="budget-total-label budget-total-final">Total Biaya CIV</td><td class="budget-total-value budget-total-final">${escapeHtml(formatRupiah(totalAmount))}</td></tr>
+    </tfoot>
+  </table>`;
+}
+
+const KWITANSI_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
+
+function kwitansiMonthLabel(iso: string): string {
+  const d = new Date(iso);
+  return `${KWITANSI_MONTHS[d.getMonth()]}-${d.getFullYear()}`;
+}
 
 async function buildFullSemesterReportAdminHtml(
   input: FullSemesterReportAdminPdfInput,
   docNumber: string
 ): Promise<string> {
-  const { report, history, khsUploads, activities, participant, admin } = input;
+  const { report, history, khsUploads, activities, budgetItems, reimbursements, participant, admin } = input;
 
   const [participantStmtUri, guardianStmtUri] = await Promise.all([
     report.commitmentParticipantFileId && isImageFileId(report.commitmentParticipantFileId)
-      ? fetchFileAsDataUri(report.commitmentParticipantFileId, 'pernyataan-partisipan', input.token)
+      ? fetchFileAsDataUri(report.commitmentParticipantFileId, input.token)
       : Promise.resolve(null),
     report.commitmentGuardianFileId && isImageFileId(report.commitmentGuardianFileId)
-      ? fetchFileAsDataUri(report.commitmentGuardianFileId, 'komitmen-ortu-wali', input.token)
+      ? fetchFileAsDataUri(report.commitmentGuardianFileId, input.token)
       : Promise.resolve(null),
   ]);
 
@@ -613,11 +739,9 @@ async function buildFullSemesterReportAdminHtml(
       .map(async (k) => {
         const semLabel = ROMAN[k.semesterNumber - 1] ?? String(k.semesterNumber);
         const [khsUri, krsUri] = await Promise.all([
-          k.fileId && isImageFileId(k.fileId)
-            ? fetchFileAsDataUri(k.fileId, `khs-${k.semesterNumber}`, input.token)
-            : Promise.resolve(null),
+          k.fileId && isImageFileId(k.fileId) ? fetchFileAsDataUri(k.fileId, input.token) : Promise.resolve(null),
           k.krsFileId && isImageFileId(k.krsFileId)
-            ? fetchFileAsDataUri(k.krsFileId, `krs-${k.semesterNumber}`, input.token)
+            ? fetchFileAsDataUri(k.krsFileId, input.token)
             : Promise.resolve(null),
         ]);
         let html = '';
@@ -635,41 +759,69 @@ async function buildFullSemesterReportAdminHtml(
       })
   );
 
-  const activityThumbUris = await Promise.all(
-    activities.map((a) =>
-      a.fileId && isImageFileId(a.fileId) ? fetchFileAsDataUri(a.fileId, 'dokumentasi', input.token) : Promise.resolve(null)
+  const activityThumbEntries = await Promise.all(
+    activities.map(
+      async (a) =>
+        [
+          a.id,
+          a.fileId && isImageFileId(a.fileId) ? await fetchFileAsDataUri(a.fileId, input.token) : null,
+        ] as const
     )
   );
+  const activityThumbById = new Map(activityThumbEntries);
+
+  function buildActivityTableHtml(items: MonthlyReport[]): string {
+    const rows = items
+      .map(
+        (a, i) => `<tr>
+          <td class="no-col">${i + 1}</td>
+          <td>${
+            activityThumbById.get(a.id)
+              ? `<img src="${activityThumbById.get(a.id)}" class="doc-thumb" />`
+              : escapeHtml('Bukan gambar')
+          }</td>
+          <td>${escapeHtml(formatDate(a.reportDate))}</td>
+          <td>${escapeHtml(a.description || '-')}</td>
+        </tr>`
+      )
+      .join('');
+    return `<table class="doc-table">
+      <thead><tr><th class="no-col">No</th><th>Dokumentasi</th><th>Tanggal</th><th>Catatan Kegiatan</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="4" class="muted">Belum ada dokumentasi.</td></tr>'}</tbody>
+    </table>`;
+  }
+
+  const activitiesByCategory: Record<MonthlyReportCategory, MonthlyReport[]> = {
+    kampus: activities.filter((a) => a.category === 'kampus'),
+    ppa_cluster: activities.filter((a) => a.category === 'ppa_cluster'),
+    mentoring: activities.filter((a) => a.category === 'mentoring'),
+  };
+
+  const reimbursementProofUris = await Promise.all(
+    reimbursements.map((r) =>
+      r.proofFileId && isImageFileId(r.proofFileId)
+        ? fetchFileAsDataUri(r.proofFileId, input.token)
+        : Promise.resolve(null)
+    )
+  );
+  const kwitansiRows = reimbursements
+    .map(
+      (r, i) => `<tr>
+        <td>${
+          reimbursementProofUris[i]
+            ? `<img src="${reimbursementProofUris[i]}" class="doc-thumb" />`
+            : escapeHtml('Bukan gambar')
+        }</td>
+        <td>${escapeHtml(kwitansiMonthLabel(r.createdAt))}</td>
+      </tr>`
+    )
+    .join('');
 
   const chartData: ChartPoint[] = history
     .filter((r) => r.ipk !== undefined)
     .map((r) => ({ label: ROMAN[r.semesterNumber - 1] ?? String(r.semesterNumber), value: r.ipk as number }));
 
-  const historyRows = history
-    .map(
-      (r) => `<tr>
-        <td>${escapeHtml(ROMAN[r.semesterNumber - 1] ?? String(r.semesterNumber))}</td>
-        <td>${escapeHtml(r.year || '-')}</td>
-        <td>${r.sks ?? '-'}</td>
-        <td>${r.ips !== undefined ? r.ips.toFixed(2) : '-'}</td>
-        <td>${r.ipk !== undefined ? r.ipk.toFixed(2) : '-'}</td>
-      </tr>`
-    )
-    .join('');
-
-  const docRows = activities
-    .map(
-      (a, i) => `<tr>
-        <td class="no-col">${i + 1}</td>
-        <td>${
-          activityThumbUris[i]
-            ? `<img src="${activityThumbUris[i]}" class="doc-thumb" />`
-            : escapeHtml('Bukan gambar')
-        }</td>
-        <td>${escapeHtml(a.description || '-')}</td>
-      </tr>`
-    )
-    .join('');
+  const riwayatTableHtml = buildRiwayatTableHtml(history, participant.major, participant.university);
 
   return `<!doctype html>
 <html>
@@ -684,21 +836,29 @@ async function buildFullSemesterReportAdminHtml(
       <p class="letter-text">Yth. Pengurus dan Staff PPA Mawar Saron,</p>
       <p class="letter-text">${escapeHtml(report.coverLetter || '-')}</p>
 
+      <div class="section-title">Rincian Penggunaan Dana</div>
+      ${buildBudgetTableHtml(budgetItems, report.kontribusiOrtu ?? 0, report.totalAmount ?? 0)}
+
       <div class="section-title">Kelengkapan Laporan</div>
       <table class="checklist-table">
         <tr><td>${checkbox(report.checklist?.commitment)} Pernyataan Komitmen Partisipan &amp; Orang Tua/Wali</td></tr>
         <tr><td>${checkbox(report.checklist?.khs)} Kartu Hasil Studi (KHS)</td></tr>
         <tr><td>${checkbox(report.checklist?.activities)} Dokumentasi Kegiatan (minimal 5)</td></tr>
+        <tr><td>${checkbox(report.checklist?.budget)} Rincian Penggunaan Dana</td></tr>
       </table>
 
       <div class="section-title">Riwayat IPS / IPK</div>
-      <table class="meta-table" style="width:100%;">
-        <thead><tr><th>Semester</th><th>Tahun</th><th>SKS</th><th>IPS</th><th>IPK</th></tr></thead>
-        <tbody>${historyRows || '<tr><td colspan="5" class="muted">Belum ada riwayat.</td></tr>'}</tbody>
-      </table>
+      ${riwayatTableHtml}
 
       <div class="section-title">Grafik IPK</div>
       ${buildIpkChartSvg(chartData)}
+
+      <div class="section-title">Target Kelulusan</div>
+      <table class="meta-table" style="width:100%;">
+        <tr><td>Target IPK (saat lulus)</td><td>${participant.targetIpk !== undefined ? participant.targetIpk.toFixed(2) : '-'}</td></tr>
+        <tr><td>Tanggal Lulus Kuliah</td><td>${participant.targetGraduationDate ? escapeHtml(formatDate(participant.targetGraduationDate)) : '-'}</td></tr>
+        <tr><td>Tanggal Lulus PPA (Completion Date)</td><td>${participant.ppaCompletionDate ? escapeHtml(formatDate(participant.ppaCompletionDate)) : '-'}</td></tr>
+      </table>
     </div>
     <div class="page-break"></div>
 
@@ -717,10 +877,28 @@ async function buildFullSemesterReportAdminHtml(
     ${khsPages.join('')}
 
     <div class="page">
-      <div class="section-title">Dokumentasi Kegiatan</div>
+      <div class="section-title">${ACTIVITY_CATEGORY_TITLE.kampus}</div>
+      ${buildActivityTableHtml(activitiesByCategory.kampus)}
+    </div>
+    <div class="page-break"></div>
+
+    <div class="page">
+      <div class="section-title">${ACTIVITY_CATEGORY_TITLE.ppa_cluster}</div>
+      ${buildActivityTableHtml(activitiesByCategory.ppa_cluster)}
+    </div>
+    <div class="page-break"></div>
+
+    <div class="page">
+      <div class="section-title">${ACTIVITY_CATEGORY_TITLE.mentoring}</div>
+      ${buildActivityTableHtml(activitiesByCategory.mentoring)}
+    </div>
+    <div class="page-break"></div>
+
+    <div class="page">
+      <div class="section-title">Lampiran Nota dan Kwitansi Pembayaran</div>
       <table class="doc-table">
-        <thead><tr><th class="no-col">No</th><th>Dokumentasi</th><th>Keterangan</th></tr></thead>
-        <tbody>${docRows || '<tr><td colspan="3" class="muted">Belum ada dokumentasi.</td></tr>'}</tbody>
+        <thead><tr><th>Foto Kwitansi</th><th>Bulan</th></tr></thead>
+        <tbody>${kwitansiRows || '<tr><td colspan="2" class="muted">Belum ada kwitansi pada periode ini.</td></tr>'}</tbody>
       </table>
     </div>
     ${docFooter(admin, docNumber)}

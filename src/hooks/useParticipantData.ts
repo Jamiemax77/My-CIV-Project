@@ -4,10 +4,13 @@ import { useAuthStore } from '../store/authStore';
 import {
   AccountItem,
   AccountKind,
+  BudgetItem,
   CommitmentStatement,
   FullSemesterReport,
+  Gender,
   KhsUpload,
   MonthlyReport,
+  MonthlyReportCategory,
   ReimbursementCategory,
   ReimbursementItem,
   ReimbursementType,
@@ -22,8 +25,17 @@ function useToken() {
 export function useUpdateProfile() {
   const token = useToken();
   return useMutation({
-    mutationFn: (input: { email: string; phone?: string; photoFileId?: string }) =>
-      api.patch<{ profile: UserProfile }>('/participant/profile', input, token),
+    mutationFn: (input: {
+      fullName: string;
+      email: string;
+      phone?: string;
+      gender?: Gender;
+      semester?: number;
+      targetIpk?: number;
+      targetGraduationDate?: string;
+      ppaCompletionDate?: string;
+      photoFileId?: string;
+    }) => api.patch<{ profile: UserProfile }>('/participant/profile', input, token),
     onSuccess: ({ profile }) => useAuthStore.getState().updateUser(profile),
   });
 }
@@ -105,8 +117,63 @@ export function useSubmitFullSemesterReport() {
       ips: number;
       ipk: number;
       coverLetter: string;
-      totalAmount: number;
     }) => api.post<{ id: string }>('/participant/full-semester-reports', input, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+  });
+}
+
+export function useBudgetItems(reportId: string | undefined) {
+  const token = useToken();
+  return useQuery({
+    queryKey: ['budgetItems', reportId],
+    queryFn: () => api.get<BudgetItem[]>(`/participant/full-semester-reports/${reportId}/budget-items`, token),
+    enabled: !!token && !!reportId,
+  });
+}
+
+export function useAddBudgetItem(reportId: string | undefined) {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { keterangan: string; unit: number; satuan: number }) =>
+      api.post<{ id: string; totalAmount: number }>(
+        `/participant/full-semester-reports/${reportId}/budget-items`,
+        input,
+        token
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgetItems', reportId] });
+      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
+    },
+  });
+}
+
+export function useDeleteBudgetItem(reportId: string | undefined) {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (itemId: string) =>
+      api.delete<{ totalAmount: number }>(
+        `/participant/full-semester-reports/${reportId}/budget-items/${itemId}`,
+        token
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['budgetItems', reportId] });
+      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
+    },
+  });
+}
+
+export function useUpdateKontribusi(reportId: string | undefined) {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (kontribusiOrtu: number) =>
+      api.patch<{ totalAmount: number }>(
+        `/participant/full-semester-reports/${reportId}/kontribusi`,
+        { kontribusiOrtu },
+        token
+      ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
   });
 }
@@ -153,6 +220,19 @@ export function useUploadKhs() {
   });
 }
 
+export function useDeleteKhsUpload() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ semesterNumber, docType }: { semesterNumber: number; docType: 'khs' | 'krs' }) =>
+      api.delete<{ ok: true }>(`/participant/khs/${semesterNumber}/${docType}`, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['khsUploads'] });
+      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
+    },
+  });
+}
+
 export function useCommitmentStatements() {
   const token = useToken();
   return useQuery({
@@ -175,6 +255,19 @@ export function useUploadCommitmentStatement() {
   });
 }
 
+export function useDeleteCommitmentStatement() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (type: 'participant' | 'guardian') =>
+      api.delete<{ ok: true }>(`/participant/commitment-statements/${type}`, token),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['commitmentStatements'] });
+      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
+    },
+  });
+}
+
 export function useMonthlyReports() {
   const token = useToken();
   return useQuery({
@@ -188,8 +281,12 @@ export function useAddMonthlyReport() {
   const token = useToken();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { description: string; reportDate: string; fileId: string }) =>
-      api.post<{ id: string }>('/participant/monthly-reports', input, token),
+    mutationFn: (input: {
+      description: string;
+      category: MonthlyReportCategory;
+      reportDate: string;
+      fileId: string;
+    }) => api.post<{ id: string }>('/participant/monthly-reports', input, token),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['monthlyReports'] }),
   });
 }
@@ -204,6 +301,7 @@ export function useUpdateMonthlyReport() {
     }: {
       id: string;
       description: string;
+      category: MonthlyReportCategory;
       reportDate: string;
       fileId: string;
     }) => api.patch<{ ok: true }>(`/participant/monthly-reports/${id}`, patch, token),

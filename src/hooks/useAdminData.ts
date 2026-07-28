@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import {
   AdminParticipant,
   AdminStats,
+  BudgetItem,
   Disbursement,
   DisbursementStatus,
   AccountItem,
@@ -291,6 +292,15 @@ export function useAdminFullSemesterReportActivities(reportId: string | undefine
     queryKey: ['adminFullSemesterReportActivities', reportId],
     queryFn: () =>
       api.get<MonthlyReport[]>(`/admin/full-semester-reports/${reportId}/activities`, token),
+    enabled: !!token && !!reportId,
+  });
+}
+
+export function useAdminBudgetItems(reportId: string | undefined) {
+  const token = useToken();
+  return useQuery({
+    queryKey: ['adminBudgetItems', reportId],
+    queryFn: () => api.get<BudgetItem[]>(`/admin/full-semester-reports/${reportId}/budget-items`, token),
     enabled: !!token && !!reportId,
   });
 }

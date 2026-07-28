@@ -17,6 +17,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   university VARCHAR(255),
   major VARCHAR(255),
   semester INT,
+  target_ipk DECIMAL(3, 2) NULL,
+  target_graduation_date DATE NULL,
+  ppa_completion_date DATE NULL,
   scholarship_type ENUM('CIV P153', 'CIV Edu', 'BDP Support PPA', 'Lainnya') NULL,
   photo_path VARCHAR(500),
   pin_hash VARCHAR(255) NOT NULL,
@@ -98,6 +101,7 @@ CREATE TABLE IF NOT EXISTS full_semester_reports (
   ipk DECIMAL(3, 2),
   cover_letter VARCHAR(200),
   total_amount DECIMAL(14, 2),
+  kontribusi_ortu DECIMAL(14, 2) NOT NULL DEFAULT 0,
   file_name VARCHAR(255),
   pdf_file_id VARCHAR(500),
   status ENUM('draft', 'pending', 'verified', 'revision') NOT NULL DEFAULT 'draft',
@@ -106,6 +110,20 @@ CREATE TABLE IF NOT EXISTS full_semester_reports (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (participant_id) REFERENCES profiles(id) ON DELETE CASCADE,
   UNIQUE KEY uq_full_report_semester (participant_id, semester_number)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Itemized "Rincian Penggunaan Dana" lines behind a full_semester_reports.total_amount —
+-- total_amount = SUM(jumlah) - kontribusi_ortu, recomputed whenever a line or kontribusi changes.
+CREATE TABLE IF NOT EXISTS full_semester_report_budget_items (
+  id VARCHAR(40) PRIMARY KEY,
+  report_id VARCHAR(40) NOT NULL,
+  keterangan VARCHAR(255) NOT NULL,
+  unit INT NOT NULL,
+  satuan DECIMAL(14, 2) NOT NULL,
+  jumlah DECIMAL(14, 2) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (report_id) REFERENCES full_semester_reports(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS khs_uploads (
@@ -133,6 +151,7 @@ CREATE TABLE IF NOT EXISTS monthly_reports (
   id VARCHAR(40) PRIMARY KEY,
   participant_id VARCHAR(40) NOT NULL,
   description TEXT,
+  category ENUM('kampus', 'ppa_cluster', 'mentoring') NOT NULL DEFAULT 'kampus',
   report_date DATE,
   file_id VARCHAR(500),
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

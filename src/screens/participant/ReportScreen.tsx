@@ -22,6 +22,7 @@ import {
 } from '../../hooks/useParticipantData';
 import { uploadFile } from '../../lib/api';
 import { formatDate } from '../../lib/format';
+import { MONTHLY_REPORT_CATEGORY_LABEL } from '../../lib/labels';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
 import { FullSemesterReportStatus, MonthlyReport } from '../../types/models';
@@ -72,6 +73,7 @@ export function ReportScreen() {
       const uploaded = await uploadFile(input.file, 'monthly-report', token, user.id);
       await addMonthlyReport.mutateAsync({
         description: input.description.trim(),
+        category: input.category,
         reportDate: input.reportDate,
         fileId: uploaded.fileId,
       });
@@ -97,6 +99,7 @@ export function ReportScreen() {
       await updateMonthlyReport.mutateAsync({
         id: editTarget.id,
         description: input.description.trim(),
+        category: input.category,
         reportDate: input.reportDate,
         fileId,
       });
@@ -181,6 +184,9 @@ export function ReportScreen() {
                 title={formatDate(r.reportDate)}
                 subtitle={r.description ?? '-'}
                 onPress={() => setDetailTarget(r)}
+                right={
+                  <Text style={styles.categoryTag}>{MONTHLY_REPORT_CATEGORY_LABEL[r.category]}</Text>
+                }
               />
             ))
           )}
@@ -236,6 +242,7 @@ export function ReportScreen() {
           editTarget
             ? {
                 description: editTarget.description ?? '',
+                category: editTarget.category,
                 reportDate: editTarget.reportDate,
                 fileId: editTarget.fileId,
               }
@@ -266,6 +273,15 @@ const styles = StyleSheet.create({
   body: { padding: 16 },
   actionBtn: {
     marginBottom: 10,
+  },
+  categoryTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.muted,
+    backgroundColor: colors.skySoft,
+    borderRadius: radius.sm,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
   },
   sectionTitle: {
     fontSize: 14,

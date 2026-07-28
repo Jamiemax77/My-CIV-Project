@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import { RouteProp, useRoute } from '@react-navigation/native';
+import React, { useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AdminTabParamList, VerificationSection } from '../../app/AdminTabs';
 import { Header } from '../../components/Header';
 import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import { Skeleton } from '../../components/Skeleton';
@@ -14,11 +16,19 @@ import { VerifyFullSemesterReportScreen } from './VerifyFullSemesterReportScreen
 import { VerifyReimbursementScreen } from './VerifyReimbursementScreen';
 import { VerifyReportScreen } from './VerifyReportScreen';
 
-type Section = 'klaim' | 'laporan' | 'lengkap';
+type Section = VerificationSection;
 
 export function VerificationScreen() {
-  const [section, setSection] = useState<Section>('klaim');
+  const route = useRoute<RouteProp<AdminTabParamList, 'Verifikasi'>>();
+  const [section, setSection] = useState<Section>(route.params?.section ?? 'klaim');
   const loading = useMockLoading();
+
+  // A notification tap (e.g. "Laporan Semester Lengkap baru") re-navigates here with a
+  // section param — this screen stays mounted as a tab, so the initial useState value above
+  // only fires once; re-sync whenever a fresh param arrives while already on this tab.
+  useEffect(() => {
+    if (route.params?.section) setSection(route.params.section);
+  }, [route.params?.section]);
   const { refetch: refetchReimbursements, isRefetching: reimbursementsRefetching } =
     useAdminReimbursements();
   const { refetch: refetchReports, isRefetching: reportsRefetching } = useAdminReports();

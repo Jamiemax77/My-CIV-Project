@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDate } from '../lib/format';
+import { MONTHLY_REPORT_CATEGORY_LABEL } from '../lib/labels';
 import { openRemotePdf } from '../lib/pdf';
 import { colors, radius, spacing } from '../theme';
 import { MonthlyReport } from '../types/models';
@@ -54,6 +55,7 @@ export function MonthlyReportDetailModal({
           {report ? (
             <>
               <Text style={styles.date}>{formatDate(report.reportDate)}</Text>
+              <Text style={styles.category}>{MONTHLY_REPORT_CATEGORY_LABEL[report.category]}</Text>
               <Text style={styles.description}>{report.description}</Text>
 
               {report.fileId ? (
@@ -123,6 +125,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     color: colors.navy,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  category: {
+    fontSize: 12,
+    color: colors.muted,
     textAlign: 'center',
     marginBottom: 10,
   },

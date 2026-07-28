@@ -10,6 +10,9 @@ function profileToPublic(row) {
     gender: row.gender || undefined,
     university: row.university || undefined,
     semester: row.semester ?? undefined,
+    targetIpk: row.target_ipk !== null && row.target_ipk !== undefined ? Number(row.target_ipk) : undefined,
+    targetGraduationDate: row.target_graduation_date || undefined,
+    ppaCompletionDate: row.ppa_completion_date || undefined,
     scholarshipType: row.scholarship_type || undefined,
     photoUrl: row.photo_path || undefined,
     mustChangePin: !!row.must_change_pin,
@@ -112,6 +115,9 @@ function fullSemesterReportToPublic(row) {
     totalAmount: row.total_amount !== null && row.total_amount !== undefined
       ? Number(row.total_amount)
       : undefined,
+    kontribusiOrtu: row.kontribusi_ortu !== null && row.kontribusi_ortu !== undefined
+      ? Number(row.kontribusi_ortu)
+      : undefined,
     fileName: row.file_name || undefined,
     pdfFileId: row.pdf_file_id || undefined,
     status: row.status,
@@ -123,6 +129,18 @@ function fullSemesterReportToPublic(row) {
     khsFileId: row.khsFileId || undefined,
     commitmentParticipantFileId: row.commitmentParticipantFileId || undefined,
     commitmentGuardianFileId: row.commitmentGuardianFileId || undefined,
+  };
+}
+
+function budgetItemToPublic(row) {
+  return {
+    id: row.id,
+    reportId: row.report_id,
+    keterangan: row.keterangan,
+    unit: row.unit,
+    satuan: Number(row.satuan),
+    jumlah: Number(row.jumlah),
+    sortOrder: row.sort_order,
   };
 }
 
@@ -150,6 +168,7 @@ function monthlyReportToPublic(row) {
     id: row.id,
     participantId: row.participant_id,
     description: row.description || undefined,
+    category: row.category,
     reportDate: row.report_date,
     fileId: row.file_id || undefined,
     createdAt: row.created_at,
@@ -189,6 +208,7 @@ module.exports = {
   transferProofToPublic,
   fundSourceToPublic,
   fullSemesterReportToPublic,
+  budgetItemToPublic,
   khsUploadToPublic,
   commitmentStatementToPublic,
   monthlyReportToPublic,

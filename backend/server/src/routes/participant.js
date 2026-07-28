@@ -11,6 +11,7 @@ const {
   accountToPublic,
   transferProofToPublic,
   fullSemesterReportToPublic,
+  budgetItemToPublic,
   khsUploadToPublic,
   commitmentStatementToPublic,
   monthlyReportToPublic,
@@ -43,15 +44,60 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 router.patch(
   '/profile',
   asyncHandler(async (req, res) => {
-    const { email, phone, photoFileId } = req.body;
+    // Nomor ID (id_number) is deliberately not accepted here — it's admin-assigned and
+    // doubles as the login identifier, so participants can edit everything else about
+    // their own profile except that.
+    const {
+      fullName,
+      email,
+      phone,
+      gender,
+      semester,
+      targetIpk,
+      targetGraduationDate,
+      ppaCompletionDate,
+      photoFileId,
+    } = req.body;
+    if (!fullName || !fullName.trim()) throw new ApiError('Nama wajib diisi.');
     if (!email) throw new ApiError('Email wajib diisi.');
     const normalizedEmail = String(email).trim().toLowerCase();
     if (!EMAIL_RE.test(normalizedEmail)) throw new ApiError('Email tidak valid.');
+    if (gender !== undefined && gender !== null && gender !== '' && gender !== 'L' && gender !== 'P') {
+      throw new ApiError('Jenis kelamin tidak valid.');
+    }
+    let semesterNum = null;
+    if (semester !== undefined && semester !== null && semester !== '') {
+      semesterNum = Number(semester);
+      if (!Number.isInteger(semesterNum) || semesterNum < 1 || semesterNum > 14) {
+        throw new ApiError('Semester tidak valid.');
+      }
+    }
+    let targetIpkNum = null;
+    if (targetIpk !== undefined && targetIpk !== null && targetIpk !== '') {
+      targetIpkNum = Number(targetIpk);
+      if (!(targetIpkNum > 0 && targetIpkNum <= 4)) {
+        throw new ApiError('Target IPK harus di antara 0 dan 4.');
+      }
+    }
 
     try {
       await pool.query(
-        'UPDATE profiles SET email = ?, phone = ?, photo_path = COALESCE(?, photo_path) WHERE id = ?',
-        [normalizedEmail, phone || null, photoFileId || null, req.session.profileId]
+        `UPDATE profiles
+         SET full_name = ?, email = ?, phone = ?, gender = ?, semester = ?, target_ipk = ?,
+             target_graduation_date = ?, ppa_completion_date = ?, photo_path = COALESCE(?, photo_path)
+         WHERE id = ?`,
+        [
+          fullName.trim(),
+          normalizedEmail,
+          phone || null,
+          gender || null,
+          semesterNum,
+          targetIpkNum,
+          targetGraduationDate || null,
+          ppaCompletionDate || null,
+          photoFileId || null,
+          req.session.profileId,
+        ]
       );
     } catch (err) {
       if (err.code === 'ER_DUP_ENTRY') throw new ApiError('Email sudah digunakan akun lain.');
@@ -303,6 +349,7 @@ router.get(
 
     const reportIds = reports.map((r) => r.id);
     const activityCounts = {};
+    const budgetItemCounts = {};
     if (reportIds.length > 0) {
       const [counts] = await pool.query(
         'SELECT report_id, COUNT(*) AS cnt FROM report_activity_links WHERE report_id IN (?) GROUP BY report_id',
@@ -310,6 +357,13 @@ router.get(
       );
       counts.forEach((c) => {
         activityCounts[c.report_id] = c.cnt;
+      });
+      const [budgetCounts] = await pool.query(
+        'SELECT report_id, COUNT(*) AS cnt FROM full_semester_report_budget_items WHERE report_id IN (?) GROUP BY report_id',
+        [reportIds]
+      );
+      budgetCounts.forEach((c) => {
+        budgetItemCounts[c.report_id] = c.cnt;
       });
     }
 
@@ -322,6 +376,7 @@ router.get(
           commitment: commitmentDone,
           khs: khsSemesters.has(r.semester_number),
           activities: activityCount >= 5,
+          budget: (budgetItemCounts[r.id] || 0) > 0,
         },
       });
     });
@@ -333,12 +388,14 @@ router.get(
 router.post(
   '/full-semester-reports',
   asyncHandler(async (req, res) => {
-    const { semesterNumber, year, sks, ips, ipk, coverLetter, totalAmount } = req.body;
+    // total_amount is deliberately not accepted here anymore — it's derived from the
+    // "Rincian Penggunaan Dana" budget items (see the /budget-items routes below) minus
+    // kontribusi_ortu, recomputed whenever a line item or the kontribusi changes.
+    const { semesterNumber, year, sks, ips, ipk, coverLetter } = req.body;
     const semNum = Number(semesterNumber);
     if (!semNum || semNum < 1) throw new ApiError('Nomor semester tidak valid.');
     if (!coverLetter || !coverLetter.trim()) throw new ApiError('Kata pengantar wajib diisi.');
     if (coverLetter.length > 200) throw new ApiError('Kata pengantar maksimal 200 karakter.');
-    if (!(totalAmount > 0)) throw new ApiError('Total pengajuan harus lebih dari 0.');
     if (!(sks > 0)) throw new ApiError('SKS wajib diisi.');
     if (!(ips > 0 && ips <= 4)) throw new ApiError('IPS harus di antara 0 dan 4.');
     if (!(ipk > 0 && ipk <= 4)) throw new ApiError('IPK harus di antara 0 dan 4.');
@@ -362,10 +419,10 @@ router.post(
     if (existing) {
       await pool.query(
         `UPDATE full_semester_reports
-         SET year = ?, sks = ?, ips = ?, ipk = ?, cover_letter = ?, total_amount = ?, file_name = ?,
+         SET year = ?, sks = ?, ips = ?, ipk = ?, cover_letter = ?, file_name = ?,
              status = 'draft', reviewed_by = NULL, reviewed_at = NULL
          WHERE id = ?`,
-        [year || null, sks, ips, ipk, coverLetter.trim(), totalAmount, fileName, existing.id]
+        [year || null, sks, ips, ipk, coverLetter.trim(), fileName, existing.id]
       );
       res.json({ ok: true, data: { id: existing.id } });
     } else {
@@ -373,11 +430,115 @@ router.post(
       await pool.query(
         `INSERT INTO full_semester_reports
           (id, participant_id, semester_number, year, sks, ips, ipk, cover_letter, total_amount, file_name, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft')`,
-        [id, participantId, semNum, year || null, sks, ips, ipk, coverLetter.trim(), totalAmount, fileName]
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'draft')`,
+        [id, participantId, semNum, year || null, sks, ips, ipk, coverLetter.trim(), fileName]
       );
       res.status(201).json({ ok: true, data: { id } });
     }
+  })
+);
+
+async function recomputeFullSemesterReportTotal(reportId) {
+  const [[{ sumJumlah }]] = await pool.query(
+    'SELECT COALESCE(SUM(jumlah), 0) AS sumJumlah FROM full_semester_report_budget_items WHERE report_id = ?',
+    [reportId]
+  );
+  const [reportRows] = await pool.query(
+    'SELECT kontribusi_ortu FROM full_semester_reports WHERE id = ? LIMIT 1',
+    [reportId]
+  );
+  const kontribusi = reportRows[0] ? Number(reportRows[0].kontribusi_ortu) : 0;
+  const total = Math.max(0, Number(sumJumlah) - kontribusi);
+  await pool.query('UPDATE full_semester_reports SET total_amount = ? WHERE id = ?', [total, reportId]);
+  return total;
+}
+
+async function requireEditableOwnReport(reportId, participantId) {
+  const [rows] = await pool.query('SELECT * FROM full_semester_reports WHERE id = ? LIMIT 1', [
+    reportId,
+  ]);
+  const report = rows[0];
+  if (!report || report.participant_id !== participantId) {
+    throw new ApiError('Laporan semester tidak ditemukan.', 404);
+  }
+  if (report.status !== 'draft' && report.status !== 'revision') {
+    throw new ApiError('Laporan semester ini sudah dikirim dan tidak dapat diubah.');
+  }
+  return report;
+}
+
+router.get(
+  '/full-semester-reports/:id/budget-items',
+  asyncHandler(async (req, res) => {
+    const [rows] = await pool.query('SELECT * FROM full_semester_reports WHERE id = ? LIMIT 1', [
+      req.params.id,
+    ]);
+    if (!rows[0] || rows[0].participant_id !== req.session.profileId) {
+      throw new ApiError('Laporan semester tidak ditemukan.', 404);
+    }
+    const [items] = await pool.query(
+      'SELECT * FROM full_semester_report_budget_items WHERE report_id = ? ORDER BY sort_order ASC, created_at ASC',
+      [req.params.id]
+    );
+    res.json({ ok: true, data: items.map(budgetItemToPublic) });
+  })
+);
+
+router.post(
+  '/full-semester-reports/:id/budget-items',
+  asyncHandler(async (req, res) => {
+    await requireEditableOwnReport(req.params.id, req.session.profileId);
+    const { keterangan, unit, satuan } = req.body;
+    if (!keterangan || !keterangan.trim()) throw new ApiError('Keterangan wajib diisi.');
+    const unitNum = Number(unit);
+    const satuanNum = Number(satuan);
+    if (!(unitNum > 0)) throw new ApiError('Unit harus lebih dari 0.');
+    if (!(satuanNum > 0)) throw new ApiError('Satuan harus lebih dari 0.');
+    const jumlah = unitNum * satuanNum;
+
+    const [[{ maxOrder }]] = await pool.query(
+      'SELECT COALESCE(MAX(sort_order), -1) AS maxOrder FROM full_semester_report_budget_items WHERE report_id = ?',
+      [req.params.id]
+    );
+
+    const id = makeId('bud');
+    await pool.query(
+      `INSERT INTO full_semester_report_budget_items
+        (id, report_id, keterangan, unit, satuan, jumlah, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, req.params.id, keterangan.trim(), unitNum, satuanNum, jumlah, maxOrder + 1]
+    );
+    const totalAmount = await recomputeFullSemesterReportTotal(req.params.id);
+    res.status(201).json({ ok: true, data: { id, totalAmount } });
+  })
+);
+
+router.delete(
+  '/full-semester-reports/:id/budget-items/:itemId',
+  asyncHandler(async (req, res) => {
+    await requireEditableOwnReport(req.params.id, req.session.profileId);
+    await pool.query(
+      'DELETE FROM full_semester_report_budget_items WHERE id = ? AND report_id = ?',
+      [req.params.itemId, req.params.id]
+    );
+    const totalAmount = await recomputeFullSemesterReportTotal(req.params.id);
+    res.json({ ok: true, data: { totalAmount } });
+  })
+);
+
+router.patch(
+  '/full-semester-reports/:id/kontribusi',
+  asyncHandler(async (req, res) => {
+    await requireEditableOwnReport(req.params.id, req.session.profileId);
+    const { kontribusiOrtu } = req.body;
+    const kontribusiNum = Number(kontribusiOrtu);
+    if (!(kontribusiNum >= 0)) throw new ApiError('Kontribusi tidak valid.');
+    await pool.query('UPDATE full_semester_reports SET kontribusi_ortu = ? WHERE id = ?', [
+      kontribusiNum,
+      req.params.id,
+    ]);
+    const totalAmount = await recomputeFullSemesterReportTotal(req.params.id);
+    res.json({ ok: true, data: { totalAmount } });
   })
 );
 
@@ -424,6 +585,14 @@ router.post(
     );
     if (Number(linkRows[0].cnt) < 5) {
       throw new ApiError('Pilih minimal 5 Laporan Bulanan sebagai dokumentasi kegiatan.');
+    }
+
+    const [budgetRows] = await pool.query(
+      'SELECT COUNT(*) AS cnt FROM full_semester_report_budget_items WHERE report_id = ?',
+      [report.id]
+    );
+    if (Number(budgetRows[0].cnt) === 0) {
+      throw new ApiError('Isi Rincian Penggunaan Dana terlebih dahulu.');
     }
 
     await pool.query(
@@ -515,6 +684,23 @@ router.post(
   })
 );
 
+router.delete(
+  '/khs/:semesterNumber/:docType',
+  asyncHandler(async (req, res) => {
+    const semNum = Number(req.params.semesterNumber);
+    const { docType } = req.params;
+    if (!semNum || semNum < 1 || semNum > 8) throw new ApiError('Semester tidak valid.');
+    if (docType !== 'khs' && docType !== 'krs') throw new ApiError('Jenis berkas tidak valid.');
+
+    const column = docType === 'khs' ? 'file_id' : 'krs_file_id';
+    await pool.query(
+      `UPDATE khs_uploads SET ${column} = NULL WHERE participant_id = ? AND semester_number = ?`,
+      [req.session.profileId, semNum]
+    );
+    res.json({ ok: true, data: { ok: true } });
+  })
+);
+
 router.get(
   '/commitment-statements',
   asyncHandler(async (req, res) => {
@@ -567,6 +753,21 @@ router.post(
   })
 );
 
+router.delete(
+  '/commitment-statements/:type',
+  asyncHandler(async (req, res) => {
+    const { type } = req.params;
+    if (type !== 'participant' && type !== 'guardian') {
+      throw new ApiError('Jenis pernyataan tidak valid.');
+    }
+    const column = type === 'participant' ? 'participant_stmt_file_id' : 'guardian_stmt_file_id';
+    await pool.query(`UPDATE commitment_statements SET ${column} = NULL WHERE participant_id = ?`, [
+      req.session.profileId,
+    ]);
+    res.json({ ok: true, data: { ok: true } });
+  })
+);
+
 router.get(
   '/monthly-reports',
   asyncHandler(async (req, res) => {
@@ -578,19 +779,22 @@ router.get(
   })
 );
 
+const MONTHLY_REPORT_CATEGORIES = ['kampus', 'ppa_cluster', 'mentoring'];
+
 router.post(
   '/monthly-reports',
   asyncHandler(async (req, res) => {
-    const { description, reportDate, fileId } = req.body;
+    const { description, category, reportDate, fileId } = req.body;
     if (!description || !description.trim()) throw new ApiError('Deskripsi aktivitas wajib diisi.');
+    if (!MONTHLY_REPORT_CATEGORIES.includes(category)) throw new ApiError('Kategori kegiatan tidak valid.');
     if (!reportDate) throw new ApiError('Tanggal wajib diisi.');
     if (!fileId) throw new ApiError('Berkas/foto wajib diunggah.');
 
     const id = makeId('mr');
     await pool.query(
-      `INSERT INTO monthly_reports (id, participant_id, description, report_date, file_id)
-       VALUES (?, ?, ?, ?, ?)`,
-      [id, req.session.profileId, description.trim(), reportDate, fileId]
+      `INSERT INTO monthly_reports (id, participant_id, description, category, report_date, file_id)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [id, req.session.profileId, description.trim(), category, reportDate, fileId]
     );
     res.status(201).json({ ok: true, data: { id } });
   })
@@ -607,14 +811,15 @@ router.patch(
       throw new ApiError('Laporan bulanan tidak ditemukan.', 404);
     }
 
-    const { description, reportDate, fileId } = req.body;
+    const { description, category, reportDate, fileId } = req.body;
     if (!description || !description.trim()) throw new ApiError('Deskripsi aktivitas wajib diisi.');
+    if (!MONTHLY_REPORT_CATEGORIES.includes(category)) throw new ApiError('Kategori kegiatan tidak valid.');
     if (!reportDate) throw new ApiError('Tanggal wajib diisi.');
     if (!fileId) throw new ApiError('Berkas/foto wajib diunggah.');
 
     await pool.query(
-      'UPDATE monthly_reports SET description = ?, report_date = ?, file_id = ? WHERE id = ?',
-      [description.trim(), reportDate, fileId, req.params.id]
+      'UPDATE monthly_reports SET description = ?, category = ?, report_date = ?, file_id = ? WHERE id = ?',
+      [description.trim(), category, reportDate, fileId, req.params.id]
     );
     res.json({ ok: true, data: { ok: true } });
   })

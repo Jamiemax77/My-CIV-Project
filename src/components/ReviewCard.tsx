@@ -23,10 +23,13 @@ type ReviewCardProps = {
   onApprove?: () => void;
   onReject?: () => void;
   readOnly?: boolean;
-  /** Only meaningful once a decision exists (readOnly) — exports a Berita Acara Verifikasi PDF. */
+  /** Only meaningful once a decision exists (readOnly) — exports a PDF (Berita Acara Verifikasi
+   * by default, or whatever `exportLabel` describes for callers that export something else). */
   onExportPdf?: () => void;
   onSharePdf?: () => void;
   exporting?: boolean;
+  exportLabel?: string;
+  exportingLabel?: string;
 };
 
 export function ReviewCard({
@@ -46,6 +49,8 @@ export function ReviewCard({
   onExportPdf,
   onSharePdf,
   exporting,
+  exportLabel = 'Export PDF',
+  exportingLabel = 'Membuat PDF...',
 }: ReviewCardProps) {
   return (
     <Pressable onPress={onPress} disabled={!onPress}>
@@ -105,7 +110,7 @@ export function ReviewCard({
         <View style={styles.btnRow}>
           {onExportPdf ? (
             <Button
-              label={exporting ? 'Membuat PDF...' : 'Export PDF'}
+              label={exporting ? exportingLabel : exportLabel}
               variant="ghost"
               onPress={onExportPdf}
               disabled={exporting}

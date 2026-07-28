@@ -26,9 +26,11 @@ function resolveTarget (
   if (role === 'admin') {
     switch (notification.type) {
       case 'reimbursement_submitted':
+        return { screen: 'Tabs', params: { screen: 'Verifikasi', params: { section: 'klaim' } } }
       case 'report_submitted':
+        return { screen: 'Tabs', params: { screen: 'Verifikasi', params: { section: 'laporan' } } }
       case 'full_semester_report_submitted':
-        return { screen: 'Tabs', params: { screen: 'Verifikasi' } }
+        return { screen: 'Tabs', params: { screen: 'Verifikasi', params: { section: 'lengkap' } } }
       case 'pin_reset_requested':
         return data.participantId
           ? { screen: 'ParticipantDetail', params: { participantId: data.participantId } }

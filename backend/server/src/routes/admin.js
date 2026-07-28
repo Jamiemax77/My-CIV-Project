@@ -11,6 +11,7 @@ const {
   accountToPublic,
   fundSourceToPublic,
   fullSemesterReportToPublic,
+  budgetItemToPublic,
   monthlyReportToPublic,
   pinResetRequestToPublic,
   khsUploadToPublic,
@@ -563,6 +564,7 @@ router.get(
 
     const reportIds = reports.map((r) => r.id);
     const activityCounts = {};
+    const budgetItemCounts = {};
     if (reportIds.length > 0) {
       const [counts] = await pool.query(
         'SELECT report_id, COUNT(*) AS cnt FROM report_activity_links WHERE report_id IN (?) GROUP BY report_id',
@@ -570,6 +572,13 @@ router.get(
       );
       counts.forEach((c) => {
         activityCounts[c.report_id] = c.cnt;
+      });
+      const [budgetCounts] = await pool.query(
+        'SELECT report_id, COUNT(*) AS cnt FROM full_semester_report_budget_items WHERE report_id IN (?) GROUP BY report_id',
+        [reportIds]
+      );
+      budgetCounts.forEach((c) => {
+        budgetItemCounts[c.report_id] = c.cnt;
       });
     }
 
@@ -592,6 +601,7 @@ router.get(
           commitment: commitmentDone,
           khs: !!khsFileId,
           activities: activityCount >= 5,
+          budget: (budgetItemCounts[r.id] || 0) > 0,
         },
       });
     });
@@ -612,6 +622,19 @@ router.get(
       [req.params.id]
     );
     res.json({ ok: true, data: rows.map(monthlyReportToPublic) });
+  })
+);
+
+// Itemized "Rincian Penggunaan Dana" behind a report's total_amount — used both by the admin
+// detail screen (review) and the "Cetak Laporan" combined PDF.
+router.get(
+  '/full-semester-reports/:id/budget-items',
+  asyncHandler(async (req, res) => {
+    const [rows] = await pool.query(
+      'SELECT * FROM full_semester_report_budget_items WHERE report_id = ? ORDER BY sort_order ASC, created_at ASC',
+      [req.params.id]
+    );
+    res.json({ ok: true, data: rows.map(budgetItemToPublic) });
   })
 );
 

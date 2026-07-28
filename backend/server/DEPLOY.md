@@ -31,6 +31,7 @@ mysql -u civ_user -p civ_project < migrations/006_disbursement_sent_status.sql
 mysql -u civ_user -p civ_project < migrations/007_disbursement_program.sql
 mysql -u civ_user -p civ_project < migrations/008_reimbursement_second_proof.sql
 mysql -u civ_user -p civ_project < migrations/009_khs_krs_upload.sql
+mysql -u civ_user -p civ_project < migrations/010_full_semester_report_extras.sql
 ```
 
 ## 2. Create the site

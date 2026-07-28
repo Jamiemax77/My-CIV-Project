@@ -1,6 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
 import { BottomNav, BottomNavItem } from '../components/BottomNav';
+import { useUnreadNotificationCount } from '../hooks/useNotifications';
 import { DashboardScreen } from '../screens/participant/DashboardScreen';
 import { ProfileScreen } from '../screens/participant/ProfileScreen';
 import { ReimbursementScreen } from '../screens/participant/ReimbursementScreen';
@@ -13,16 +14,19 @@ export type ParticipantTabParamList = {
   Profil: undefined;
 };
 
-const items: BottomNavItem[] = [
-  { key: 'Beranda', label: 'Beranda', icon: 'home' },
-  { key: 'Klaim', label: 'Klaim', icon: 'receipt' },
-  { key: 'Laporan', label: 'Laporan', icon: 'document-text' },
-  { key: 'Profil', label: 'Profil', icon: 'person' },
-];
-
 const Tab = createBottomTabNavigator<ParticipantTabParamList>();
 
 export function ParticipantTabs() {
+  // Shares the React Query cache with ProfileScreen's own unread-notification badge.
+  const { data: unreadData } = useUnreadNotificationCount();
+
+  const items: BottomNavItem[] = [
+    { key: 'Beranda', label: 'Beranda', icon: 'home' },
+    { key: 'Klaim', label: 'Klaim', icon: 'receipt' },
+    { key: 'Laporan', label: 'Laporan', icon: 'document-text' },
+    { key: 'Profil', label: 'Profil', icon: 'person', badge: unreadData?.count },
+  ];
+
   return (
     <Tab.Navigator
       screenOptions={{ headerShown: false }}
