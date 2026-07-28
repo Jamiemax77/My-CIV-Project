@@ -13,6 +13,7 @@ const {
   fullSemesterReportToPublic,
   monthlyReportToPublic,
   pinResetRequestToPublic,
+  khsUploadToPublic,
 } = require('../lib/serialize');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -392,6 +393,32 @@ router.get(
       [req.params.id]
     );
     res.json({ ok: true, data: rows.map(monthlyReportToPublic) });
+  })
+);
+
+// Full history (all semesters) for one participant — used by the admin's combined "Laporan
+// Semester Lengkap" PDF for the IPS/IPK table + chart, distinct from GET /full-semester-reports
+// which is the flat cross-participant list for the Verifikasi screen.
+router.get(
+  '/participants/:id/full-semester-reports',
+  asyncHandler(async (req, res) => {
+    const [rows] = await pool.query(
+      "SELECT * FROM full_semester_reports WHERE participant_id = ? AND status != 'draft' ORDER BY semester_number ASC",
+      [req.params.id]
+    );
+    res.json({ ok: true, data: rows.map(fullSemesterReportToPublic) });
+  })
+);
+
+// All KHS/KRS uploads (every semester) for one participant — used by the same combined PDF.
+router.get(
+  '/participants/:id/khs',
+  asyncHandler(async (req, res) => {
+    const [rows] = await pool.query(
+      'SELECT * FROM khs_uploads WHERE participant_id = ? ORDER BY semester_number ASC',
+      [req.params.id]
+    );
+    res.json({ ok: true, data: rows.map(khsUploadToPublic) });
   })
 );
 

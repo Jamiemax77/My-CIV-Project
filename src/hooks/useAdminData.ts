@@ -9,6 +9,7 @@ import {
   AccountItem,
   FullSemesterReport,
   FundSummary,
+  KhsUpload,
   MonthlyReport,
   PinResetRequest,
   PinResetRequestStatus,
@@ -174,6 +175,32 @@ export function useParticipantMonthlyReports(participantId: string | undefined) 
     queryKey: ['participantMonthlyReports', participantId],
     queryFn: () =>
       api.get<MonthlyReport[]>(`/admin/participants/${participantId}/monthly-reports`, token),
+    enabled: !!token && !!participantId,
+  });
+}
+
+/** Full semester-report history (all semesters) for one participant — for the combined PDF's
+ * IPS/IPK table + chart. Distinct from useAdminFullSemesterReports, which is the flat
+ * cross-participant list backing the Verifikasi screen. */
+export function useParticipantFullSemesterReports(participantId: string | undefined) {
+  const token = useToken();
+  return useQuery({
+    queryKey: ['participantFullSemesterReports', participantId],
+    queryFn: () =>
+      api.get<FullSemesterReport[]>(
+        `/admin/participants/${participantId}/full-semester-reports`,
+        token
+      ),
+    enabled: !!token && !!participantId,
+  });
+}
+
+/** Every KHS/KRS upload (all semesters) for one participant — for the combined PDF's Lembar 4+. */
+export function useParticipantKhsUploads(participantId: string | undefined) {
+  const token = useToken();
+  return useQuery({
+    queryKey: ['participantKhsUploads', participantId],
+    queryFn: () => api.get<KhsUpload[]>(`/admin/participants/${participantId}/khs`, token),
     enabled: !!token && !!participantId,
   });
 }

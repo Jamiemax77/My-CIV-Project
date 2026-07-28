@@ -2,7 +2,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
-import { DisbursementStatus, FullSemesterReport, MonthlyReport, UserProfile } from '../types/models';
+import { DisbursementStatus, FullSemesterReport, KhsUpload, MonthlyReport, UserProfile } from '../types/models';
 import { buildFileUrl, guessMimeType } from './api';
 import { isImageFileId } from './fileType';
 import { formatDate, formatRupiah } from './format';
@@ -498,5 +498,250 @@ export async function generateReimbursementLaporanPdf(
     idNumber: input.participant.idNumber,
     dateIso: input.date,
     amount: input.amount,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Laporan Semester Lengkap (combined, admin-generated) — assembles one participant's full
+// semester report into the multi-sheet layout admin asked for: Lembar 1 (permohonan +
+// checklist + riwayat IPS/IPK + grafik), Lembar 2 (Pernyataan Partisipan), Lembar 3 (Komitmen
+// Ortu/Wali), Lembar 4+ (KHS/KRS per semester yang sudah diunggah), Lembar terakhir (tabel
+// dokumentasi kegiatan). Every embedded photo goes through fetchFileAsDataUri the same way
+// the other cashier docs do.
+// ---------------------------------------------------------------------------
+
+type ChartPoint = { label: string; value: number };
+
+/** Same layout math as components/LineChart.tsx (react-native-svg), rebuilt as a raw <svg>
+ * string — react-native-svg components can't render inside HTML printed by expo-print, but
+ * plain SVG markup can. */
+function buildIpkChartSvg(data: ChartPoint[]): string {
+  const height = 160;
+  if (data.length === 0) {
+    return `<div class="chart-empty">Belum ada data IPK.</div>`;
+  }
+  const width = 320;
+  const paddingX = 26;
+  const paddingY = 22;
+  const chartWidth = width - paddingX * 2;
+  const chartHeight = height - paddingY * 2;
+  const maxValue = 4;
+
+  const points = data.map((d, i) => {
+    const x = paddingX + (data.length > 1 ? (i / (data.length - 1)) * chartWidth : chartWidth / 2);
+    const y = paddingY + chartHeight - (Math.min(d.value, maxValue) / maxValue) * chartHeight;
+    return { x, y, ...d };
+  });
+  const polylinePoints = points.map((p) => `${p.x},${p.y}`).join(' ');
+  const marks = points
+    .map(
+      (p) => `
+      <circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#1f49f5" />
+      <text x="${p.x}" y="${height - paddingY + 14}" font-size="9" fill="#7a8ca0" text-anchor="middle">${escapeHtml(p.label)}</text>
+      <text x="${p.x}" y="${p.y - 8}" font-size="9" fill="#06345c" font-weight="700" text-anchor="middle">${p.value.toFixed(2)}</text>`
+    )
+    .join('');
+
+  return `<svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+    <line x1="${paddingX}" y1="${paddingY}" x2="${paddingX}" y2="${height - paddingY}" stroke="#dde6ef" stroke-width="1" />
+    <line x1="${paddingX}" y1="${height - paddingY}" x2="${width - paddingX}" y2="${height - paddingY}" stroke="#dde6ef" stroke-width="1" />
+    ${points.length > 1 ? `<polyline points="${polylinePoints}" fill="none" stroke="#1f49f5" stroke-width="2" />` : ''}
+    ${marks}
+  </svg>`;
+}
+
+const LSL_STYLE = `
+  .page { }
+  .page-break { page-break-after: always; }
+  .letter-text { font-size: 13px; line-height: 1.6; margin: 4px 0; }
+  .checklist-table td { border: none; padding: 4px 0; }
+  .checklist-box { display: inline-block; width: 14px; height: 14px; border: 1.5px solid #06345c; text-align: center; line-height: 13px; font-size: 11px; font-weight: 700; margin-right: 8px; }
+  .full-page-image { width: 100%; max-height: 620px; object-fit: contain; border: 1px solid #dde6ef; border-radius: 4px; display: block; margin-top: 8px; }
+  .image-missing { border: 1px dashed #dde6ef; border-radius: 4px; padding: 40px; text-align: center; color: #7a8ca0; font-size: 12px; margin-top: 8px; }
+  .chart-empty { padding: 40px; text-align: center; color: #7a8ca0; font-size: 12px; }
+  .doc-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .doc-table th, .doc-table td { border: 1px solid #dde6ef; padding: 6px; text-align: left; vertical-align: top; }
+  .doc-table th { background: #e6f7ff; color: #06345c; }
+  .doc-table .no-col { width: 28px; text-align: center; }
+  .doc-thumb { width: 110px; height: 110px; object-fit: cover; border-radius: 4px; }
+`;
+
+function checkbox(done: boolean | undefined): string {
+  return `<span class="checklist-box">${done ? '✓' : ''}</span>`;
+}
+
+function fullPageImageBlock(dataUri: string | null, missingLabel: string): string {
+  return dataUri
+    ? `<img src="${dataUri}" class="full-page-image" />`
+    : `<div class="image-missing">${escapeHtml(missingLabel)}</div>`;
+}
+
+export type FullSemesterReportAdminPdfInput = {
+  /** The specific report being exported — carries coverLetter, checklist, and this semester's
+   * commitment statement file ids. */
+  report: FullSemesterReport;
+  /** All of the participant's non-draft reports (any semester), sorted ascending — for the
+   * IPS/IPK history table + chart on Lembar 1. */
+  history: FullSemesterReport[];
+  /** Every KHS/KRS upload the participant has, any semester, sorted ascending — Lembar 4+. */
+  khsUploads: KhsUpload[];
+  /** Linked documentation photos for this specific report — the last sheet's table. */
+  activities: MonthlyReport[];
+  participant: PersonRef;
+  admin: PersonRef;
+  token: string | null;
+};
+
+async function buildFullSemesterReportAdminHtml(
+  input: FullSemesterReportAdminPdfInput,
+  docNumber: string
+): Promise<string> {
+  const { report, history, khsUploads, activities, participant, admin } = input;
+
+  const [participantStmtUri, guardianStmtUri] = await Promise.all([
+    report.commitmentParticipantFileId && isImageFileId(report.commitmentParticipantFileId)
+      ? fetchFileAsDataUri(report.commitmentParticipantFileId, 'pernyataan-partisipan', input.token)
+      : Promise.resolve(null),
+    report.commitmentGuardianFileId && isImageFileId(report.commitmentGuardianFileId)
+      ? fetchFileAsDataUri(report.commitmentGuardianFileId, 'komitmen-ortu-wali', input.token)
+      : Promise.resolve(null),
+  ]);
+
+  const khsPages = await Promise.all(
+    khsUploads
+      .filter((k) => k.fileId || k.krsFileId)
+      .map(async (k) => {
+        const semLabel = ROMAN[k.semesterNumber - 1] ?? String(k.semesterNumber);
+        const [khsUri, krsUri] = await Promise.all([
+          k.fileId && isImageFileId(k.fileId)
+            ? fetchFileAsDataUri(k.fileId, `khs-${k.semesterNumber}`, input.token)
+            : Promise.resolve(null),
+          k.krsFileId && isImageFileId(k.krsFileId)
+            ? fetchFileAsDataUri(k.krsFileId, `krs-${k.semesterNumber}`, input.token)
+            : Promise.resolve(null),
+        ]);
+        let html = '';
+        if (k.fileId) {
+          html += `<div class="section-title">KHS Semester ${semLabel}</div>
+            ${fullPageImageBlock(khsUri, 'Berkas KHS bukan gambar — buka terpisah di Arsip.')}
+            <div class="page-break"></div>`;
+        }
+        if (k.krsFileId) {
+          html += `<div class="section-title">KRS Semester ${semLabel}</div>
+            ${fullPageImageBlock(krsUri, 'Berkas KRS bukan gambar — buka terpisah di Arsip.')}
+            <div class="page-break"></div>`;
+        }
+        return html;
+      })
+  );
+
+  const activityThumbUris = await Promise.all(
+    activities.map((a) =>
+      a.fileId && isImageFileId(a.fileId) ? fetchFileAsDataUri(a.fileId, 'dokumentasi', input.token) : Promise.resolve(null)
+    )
+  );
+
+  const chartData: ChartPoint[] = history
+    .filter((r) => r.ipk !== undefined)
+    .map((r) => ({ label: ROMAN[r.semesterNumber - 1] ?? String(r.semesterNumber), value: r.ipk as number }));
+
+  const historyRows = history
+    .map(
+      (r) => `<tr>
+        <td>${escapeHtml(ROMAN[r.semesterNumber - 1] ?? String(r.semesterNumber))}</td>
+        <td>${escapeHtml(r.year || '-')}</td>
+        <td>${r.sks ?? '-'}</td>
+        <td>${r.ips !== undefined ? r.ips.toFixed(2) : '-'}</td>
+        <td>${r.ipk !== undefined ? r.ipk.toFixed(2) : '-'}</td>
+      </tr>`
+    )
+    .join('');
+
+  const docRows = activities
+    .map(
+      (a, i) => `<tr>
+        <td class="no-col">${i + 1}</td>
+        <td>${
+          activityThumbUris[i]
+            ? `<img src="${activityThumbUris[i]}" class="doc-thumb" />`
+            : escapeHtml('Bukan gambar')
+        }</td>
+        <td>${escapeHtml(a.description || '-')}</td>
+      </tr>`
+    )
+    .join('');
+
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>${DOC_STYLE}${LSL_STYLE}</style>
+  </head>
+  <body>
+    <div class="page">
+      ${docHeader('LAPORAN SEMESTER LENGKAP')}
+      <div class="section-title">Permohonan</div>
+      <p class="letter-text">Yth. Pengurus dan Staff PPA Mawar Saron,</p>
+      <p class="letter-text">${escapeHtml(report.coverLetter || '-')}</p>
+
+      <div class="section-title">Kelengkapan Laporan</div>
+      <table class="checklist-table">
+        <tr><td>${checkbox(report.checklist?.commitment)} Pernyataan Komitmen Partisipan &amp; Orang Tua/Wali</td></tr>
+        <tr><td>${checkbox(report.checklist?.khs)} Kartu Hasil Studi (KHS)</td></tr>
+        <tr><td>${checkbox(report.checklist?.activities)} Dokumentasi Kegiatan (minimal 5)</td></tr>
+      </table>
+
+      <div class="section-title">Riwayat IPS / IPK</div>
+      <table class="meta-table" style="width:100%;">
+        <thead><tr><th>Semester</th><th>Tahun</th><th>SKS</th><th>IPS</th><th>IPK</th></tr></thead>
+        <tbody>${historyRows || '<tr><td colspan="5" class="muted">Belum ada riwayat.</td></tr>'}</tbody>
+      </table>
+
+      <div class="section-title">Grafik IPK</div>
+      ${buildIpkChartSvg(chartData)}
+    </div>
+    <div class="page-break"></div>
+
+    <div class="page">
+      <div class="section-title">Pernyataan Partisipan</div>
+      ${fullPageImageBlock(participantStmtUri, 'Belum diunggah / bukan gambar.')}
+    </div>
+    <div class="page-break"></div>
+
+    <div class="page">
+      <div class="section-title">Komitmen Orang Tua / Wali</div>
+      ${fullPageImageBlock(guardianStmtUri, 'Belum diunggah / bukan gambar.')}
+    </div>
+    <div class="page-break"></div>
+
+    ${khsPages.join('')}
+
+    <div class="page">
+      <div class="section-title">Dokumentasi Kegiatan</div>
+      <table class="doc-table">
+        <thead><tr><th class="no-col">No</th><th>Dokumentasi</th><th>Keterangan</th></tr></thead>
+        <tbody>${docRows || '<tr><td colspan="3" class="muted">Belum ada dokumentasi.</td></tr>'}</tbody>
+      </table>
+    </div>
+    ${docFooter(admin, docNumber)}
+  </body>
+</html>`;
+}
+
+/** Generates, then archives into laporan-cashier/ — same as the other cashier docs. Slower
+ * than the others since it may embed a dozen-plus images (commitments + every KHS/KRS +
+ * every documentation photo), all fetched up front as base64 data URIs. */
+export async function generateFullSemesterReportAdminPdf(
+  input: FullSemesterReportAdminPdfInput
+): Promise<{ uri: string; name: string }> {
+  assertPdfGenerationSupported();
+  const docNumber = generateDocNumber('LSL');
+  const html = await buildFullSemesterReportAdminHtml(input, docNumber);
+  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  return archiveGeneratedPdf(uri, {
+    jenis: 'LAPORAN-SEMESTER',
+    idNumber: input.participant.idNumber,
+    dateIso: input.report.createdAt,
+    amount: input.report.totalAmount ?? 0,
   });
 }

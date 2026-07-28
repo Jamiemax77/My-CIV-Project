@@ -14,10 +14,13 @@ import { ResponsiveContainer } from '../../components/ResponsiveContainer';
 import {
   useAdminFullSemesterReportActivities,
   useAdminFullSemesterReports,
+  useParticipantFullSemesterReports,
+  useParticipantKhsUploads,
   useReviewFullSemesterReport,
 } from '../../hooks/useAdminData';
 import { formatDate, formatRupiah } from '../../lib/format';
-import { openRemotePdf } from '../../lib/pdf';
+import { generateFullSemesterReportAdminPdf, openRemotePdf, shareOrDownloadPdf } from '../../lib/pdf';
+import { useArchiveStore } from '../../store/archiveStore';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
 import { FullSemesterReportStatus } from '../../types/models';
@@ -46,14 +49,21 @@ export function VerifyFullSemesterReportDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const { params } = useRoute<DetailRoute>();
   const token = useAuthStore((s) => s.token);
+  const currentAdmin = useAuthStore((s) => s.user);
+  const addArchiveEntry = useArchiveStore((s) => s.addEntry);
+  const markArchiveShared = useArchiveStore((s) => s.markShared);
   const { data: reports } = useAdminFullSemesterReports();
   const { data: activities } = useAdminFullSemesterReportActivities(params.reportId);
   const reviewReport = useReviewFullSemesterReport();
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
 
   const report = reports?.find((r) => r.id === params.reportId);
+  const { data: history } = useParticipantFullSemesterReports(report?.participantId);
+  const { data: khsUploads } = useParticipantKhsUploads(report?.participantId);
   const [openingPdf, setOpeningPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [exportingCombined, setExportingCombined] = useState(false);
+  const [combinedPdfError, setCombinedPdfError] = useState<string | null>(null);
 
   const handleOpenPdf = async () => {
     if (!report?.pdfFileId) return;
@@ -65,6 +75,42 @@ export function VerifyFullSemesterReportDetailScreen() {
       setPdfError(err instanceof Error ? err.message : 'Gagal membuka laporan PDF.');
     } finally {
       setOpeningPdf(false);
+    }
+  };
+
+  const exportCombinedPdf = async (share: boolean) => {
+    if (!report || !currentAdmin) return;
+    setCombinedPdfError(null);
+    setExportingCombined(true);
+    try {
+      const { uri, name } = await generateFullSemesterReportAdminPdf({
+        report,
+        history: history ?? [report],
+        khsUploads: khsUploads ?? [],
+        activities: activities ?? [],
+        participant: {
+          fullName: report.participantName ?? '-',
+          idNumber: report.participantIdNumber ?? '-',
+        },
+        admin: { fullName: currentAdmin.fullName, idNumber: currentAdmin.idNumber },
+        token,
+      });
+      const entry = await addArchiveEntry({
+        type: 'laporan_semester_lengkap',
+        fileName: name,
+        uri,
+        participantName: report.participantName ?? '-',
+        participantIdNumber: report.participantIdNumber ?? '-',
+        amount: report.totalAmount ?? 0,
+      });
+      if (share) {
+        await shareOrDownloadPdf(uri, name);
+        await markArchiveShared(entry.id);
+      }
+    } catch (err) {
+      setCombinedPdfError(err instanceof Error ? err.message : 'Gagal membuat laporan gabungan.');
+    } finally {
+      setExportingCombined(false);
     }
   };
 
@@ -117,6 +163,25 @@ export function VerifyFullSemesterReportDetailScreen() {
               {pdfError ? <Text style={styles.pdfError}>{pdfError}</Text> : null}
             </>
           ) : null}
+
+          <View style={styles.btnRow}>
+            <Button
+              label={exportingCombined ? 'Membuat PDF...' : 'Export PDF Lengkap'}
+              variant="ghost"
+              style={styles.btn}
+              disabled={exportingCombined}
+              loading={exportingCombined}
+              onPress={() => exportCombinedPdf(false)}
+            />
+            <Button
+              label="Bagikan"
+              variant="ghost"
+              style={styles.btn}
+              disabled={exportingCombined}
+              onPress={() => exportCombinedPdf(true)}
+            />
+          </View>
+          {combinedPdfError ? <Text style={styles.pdfError}>{combinedPdfError}</Text> : null}
 
           <Text style={styles.sectionTitle}>Kata Pengantar</Text>
           <Card style={styles.gapBottom}>

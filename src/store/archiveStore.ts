@@ -7,13 +7,15 @@ export type ArchiveDocType =
   | 'voucher_pencairan'
   | 'bukti_transfer'
   | 'berita_acara_verifikasi'
-  | 'laporan_reimbursement';
+  | 'laporan_reimbursement'
+  | 'laporan_semester_lengkap';
 
 export const ARCHIVE_DOC_TYPE_LABEL: Record<ArchiveDocType, string> = {
   voucher_pencairan: 'Voucher Pencairan',
   bukti_transfer: 'Bukti Transfer',
   berita_acara_verifikasi: 'Berita Acara Verifikasi',
   laporan_reimbursement: 'Laporan Penggunaan Dana',
+  laporan_semester_lengkap: 'Laporan Semester Lengkap',
 };
 
 export interface ArchiveEntry {
