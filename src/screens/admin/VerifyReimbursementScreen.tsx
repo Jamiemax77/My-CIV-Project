@@ -7,7 +7,7 @@ import { FilePreviewModal } from '../../components/FilePreviewModal';
 import { ReviewCard } from '../../components/ReviewCard';
 import { Skeleton } from '../../components/Skeleton';
 import { useAdminReimbursements, useReviewReimbursement } from '../../hooks/useAdminData';
-import { useVerificationActExport } from '../../hooks/useVerificationActExport';
+import { useReimbursementLaporanExport } from '../../hooks/useReimbursementLaporanExport';
 import { formatDate, formatRupiah } from '../../lib/format';
 import { REIMBURSEMENT_CATEGORY_LABEL } from '../../lib/labels';
 import { useAuthStore } from '../../store/authStore';
@@ -27,7 +27,7 @@ export function VerifyReimbursementScreen() {
   const token = useAuthStore((s) => s.token);
   const { data: reimbursements, isLoading, isError, refetch } = useAdminReimbursements();
   const reviewReimbursement = useReviewReimbursement();
-  const { exportingId, error: exportError, exportPdf, sharePdf } = useVerificationActExport();
+  const { exportingId, error: exportError, exportPdf, sharePdf } = useReimbursementLaporanExport();
   const [filter, setFilter] = useState<FilterKey>('pending');
   const [previewTarget, setPreviewTarget] = useState<ReimbursementItem | null>(null);
 
@@ -38,12 +38,16 @@ export function VerifyReimbursementScreen() {
 
   const items = (reimbursements ?? []).filter((r) => filter === 'all' || r.status === filter);
 
-  const actInputFor = (item: ReimbursementItem) => ({
-    kind: 'Klaim' as const,
-    category: REIMBURSEMENT_CATEGORY_LABEL[item.category],
+  // "Laporan Penggunaan Dana" — always this one item, never the whole Klaim list.
+  const laporanInputFor = (item: ReimbursementItem) => ({
+    nomorPengajuan: item.nomorPengajuan || item.id,
+    description: item.description,
     amount: item.amount,
     date: item.createdAt,
-    decision: item.status === 'approved' ? ('Disetujui' as const) : ('Ditolak' as const),
+    proofFileId: item.proofFileId,
+    proofFileName: item.proofFileName,
+    usageProofFileId: item.usageProofFileId,
+    usageProofFileName: item.usageProofFileName,
     participant: { fullName: item.participantName ?? '-', idNumber: item.participantIdNumber ?? '-' },
   });
 
@@ -105,10 +109,10 @@ export function VerifyReimbursementScreen() {
             onReject={() => reviewReimbursement.mutate({ id: item.id, status: 'rejected' })}
             onApprove={() => reviewReimbursement.mutate({ id: item.id, status: 'approved' })}
             onExportPdf={
-              item.status !== 'pending' ? () => exportPdf(item.id, actInputFor(item)) : undefined
+              item.status !== 'pending' ? () => exportPdf(item.id, laporanInputFor(item)) : undefined
             }
             onSharePdf={
-              item.status !== 'pending' ? () => sharePdf(item.id, actInputFor(item)) : undefined
+              item.status !== 'pending' ? () => sharePdf(item.id, laporanInputFor(item)) : undefined
             }
             exporting={exportingId === item.id}
           />

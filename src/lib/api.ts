@@ -81,7 +81,7 @@ const MIME_BY_EXT: Record<string, string> = {
   png: 'image/png',
 };
 
-function guessMimeType(name: string): string {
+export function guessMimeType(name: string): string {
   const ext = name.split('.').pop()?.toLowerCase() ?? '';
   return MIME_BY_EXT[ext] || 'application/octet-stream';
 }
@@ -120,4 +120,32 @@ export async function uploadFile(
   }
 
   return parseEnvelope<UploadResult>(res);
+}
+
+export type PinResetSelfies = {
+  front: { uri: string; name: string };
+  left: { uri: string; name: string };
+  right: { uri: string; name: string };
+};
+
+/** Pre-login "lupa PIN" submission — no token, participant identified by email/NIM. */
+export async function submitPinResetRequest(
+  identifier: string,
+  selfies: PinResetSelfies
+): Promise<{ id: string }> {
+  const baseUrl = requireBaseUrl();
+
+  const formData = new FormData();
+  formData.append('identifier', identifier);
+  (['front', 'left', 'right'] as const).forEach((key) => {
+    const file = selfies[key];
+    formData.append(key, {
+      uri: file.uri,
+      name: file.name,
+      type: guessMimeType(file.name),
+    } as unknown as Blob);
+  });
+
+  const res = await fetch(`${baseUrl}/pin-reset`, { method: 'POST', body: formData });
+  return parseEnvelope<{ id: string }>(res);
 }

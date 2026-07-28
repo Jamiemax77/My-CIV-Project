@@ -3,12 +3,17 @@ import { secureStorage } from '../lib/secureStorage';
 
 const ARCHIVE_KEY = 'civ_pdf_archive';
 
-export type ArchiveDocType = 'voucher_pencairan' | 'bukti_transfer' | 'berita_acara_verifikasi';
+export type ArchiveDocType =
+  | 'voucher_pencairan'
+  | 'bukti_transfer'
+  | 'berita_acara_verifikasi'
+  | 'laporan_reimbursement';
 
 export const ARCHIVE_DOC_TYPE_LABEL: Record<ArchiveDocType, string> = {
   voucher_pencairan: 'Voucher Pencairan',
   bukti_transfer: 'Bukti Transfer',
   berita_acara_verifikasi: 'Berita Acara Verifikasi',
+  laporan_reimbursement: 'Laporan Penggunaan Dana',
 };
 
 export interface ArchiveEntry {

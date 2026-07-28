@@ -3,7 +3,8 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 import { DisbursementStatus, FullSemesterReport, MonthlyReport, UserProfile } from '../types/models';
-import { buildFileUrl } from './api';
+import { buildFileUrl, guessMimeType } from './api';
+import { isImageFileId } from './fileType';
 import { formatDate, formatRupiah } from './format';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
@@ -121,6 +122,20 @@ export async function openRemotePdf(
   const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
   await FileSystem.downloadAsync(buildFileUrl(fileId), localUri, { headers });
   await openLocalFile(localUri, name);
+}
+
+/**
+ * Downloads an authenticated file and returns it as a `data:` URI — `expo-print`'s HTML
+ * renderer can't attach an Authorization header to an `<img src="...">` request the way
+ * `AuthImage`/`openRemotePdf` do for on-screen previews, so embedding an image *inside* a
+ * generated PDF needs the bytes inlined as base64 up front instead.
+ */
+async function fetchFileAsDataUri(fileId: string, fileName: string, token: string | null): Promise<string> {
+  const localUri = `${FileSystem.cacheDirectory}${fileId}`;
+  const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+  await FileSystem.downloadAsync(buildFileUrl(fileId), localUri, { headers });
+  const base64 = await FileSystem.readAsStringAsync(localUri, { encoding: 'base64' });
+  return `data:${guessMimeType(fileName)};base64,${base64}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -389,5 +404,99 @@ export async function generateVerificationActPdf(
     idNumber: input.participant.idNumber,
     dateIso: input.date,
     amount: input.amount ?? 0,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Laporan Penggunaan Dana — per-item reimbursement (Klaim) export, admin Verifikasi screen.
+// Unlike the other three docs above, this one embeds the participant's actual uploaded
+// photos (Nota/Kwitansi + Dokumentasi Kegiatan) rather than just describing them in a table.
+// ---------------------------------------------------------------------------
+
+export type ReimbursementLaporanInput = {
+  nomorPengajuan: string;
+  description: string;
+  amount: number;
+  /** The reimbursement's createdAt — used for the archive filename, not shown in the doc. */
+  date: string;
+  proofFileId?: string;
+  proofFileName?: string;
+  usageProofFileId?: string;
+  usageProofFileName?: string;
+  participant: PersonRef;
+  admin: PersonRef;
+  token: string | null;
+};
+
+function reportImageBlock(dataUri: string | null, fileName: string | undefined): string {
+  if (dataUri) {
+    return `<img src="${dataUri}" class="report-image" />`;
+  }
+  return `<div class="report-image-missing">${escapeHtml(
+    fileName ? `Berkas bukan gambar (${fileName}) — buka terpisah di Arsip.` : 'Belum ada berkas.'
+  )}</div>`;
+}
+
+function buildReimbursementLaporanHtml(
+  input: ReimbursementLaporanInput,
+  proofDataUri: string | null,
+  usageProofDataUri: string | null,
+  docNumber: string
+): string {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      ${DOC_STYLE}
+      .report-title { font-size: 20px; text-align: center; color: #06345c; font-weight: 800; margin-bottom: 4px; }
+      .report-subtitle { font-size: 12px; text-align: center; color: #7a8ca0; margin-top: 0; }
+      .report-divider { border: none; border-top: 1px solid #dde6ef; margin: 16px 0; }
+      .report-section-title { font-size: 13px; font-weight: 700; color: #0c2233; margin-top: 18px; margin-bottom: 8px; }
+      .report-image { width: 100%; max-height: 320px; object-fit: contain; border: 1px solid #dde6ef; border-radius: 4px; display: block; }
+      .report-image-missing { border: 1px dashed #dde6ef; border-radius: 4px; padding: 24px; text-align: center; color: #7a8ca0; font-size: 12px; }
+      .report-keterangan { font-size: 13px; font-style: italic; color: #0c2233; line-height: 1.5; }
+    </style>
+  </head>
+  <body>
+    <div class="report-title">LAPORAN PENGGUNAAN DANA</div>
+    <div class="report-subtitle">Nomor ID Pengajuan : ${escapeHtml(input.nomorPengajuan)}</div>
+    <hr class="report-divider" />
+
+    <div class="report-section-title">1. Nota / Kwitansi / Bukti Pembayaran</div>
+    ${reportImageBlock(proofDataUri, input.proofFileName)}
+
+    <div class="report-section-title">2. Dokumentasi Kegiatan / Barang yang Dibeli / Jasa</div>
+    ${reportImageBlock(usageProofDataUri, input.usageProofFileName)}
+
+    <div class="report-section-title">3. Keterangan :</div>
+    <p class="report-keterangan">${escapeHtml(input.description)}</p>
+    ${docFooter(input.admin, docNumber)}
+  </body>
+</html>`;
+}
+
+/** Renders one reimbursement (Klaim) item as a standalone "Laporan Penggunaan Dana" PDF —
+ * always per-item, called once per ReviewCard, never as a bulk export of the whole list. */
+export async function generateReimbursementLaporanPdf(
+  input: ReimbursementLaporanInput
+): Promise<{ uri: string; name: string }> {
+  assertPdfGenerationSupported();
+  const proofDataUri =
+    input.proofFileId && isImageFileId(input.proofFileId)
+      ? await fetchFileAsDataUri(input.proofFileId, input.proofFileName ?? '', input.token)
+      : null;
+  const usageProofDataUri =
+    input.usageProofFileId && isImageFileId(input.usageProofFileId)
+      ? await fetchFileAsDataUri(input.usageProofFileId, input.usageProofFileName ?? '', input.token)
+      : null;
+  const docNumber = generateDocNumber('LPD');
+  const html = buildReimbursementLaporanHtml(input, proofDataUri, usageProofDataUri, docNumber);
+  const { uri } = await Print.printToFileAsync({ html, base64: false });
+  return archiveGeneratedPdf(uri, {
+    jenis: 'LAPORAN-RMB',
+    idNumber: input.participant.idNumber,
+    dateIso: input.date,
+    amount: input.amount,
   });
 }
