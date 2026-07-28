@@ -469,7 +469,14 @@ export function DisbursementScreen() {
             </>
           ) : (
             <>
-              <Pressable onPress={() => setStep('data')} style={styles.targetCard}>
+              {/* "Ubah" only goes back in "existing" mode, where Step 1 is just a selection
+                  (re-entering it can't create anything). In "new" mode, Step 1 already created
+                  the Disbursement record — letting the admin go back and press "Lanjut" again
+                  would POST a second, duplicate record for the same pencairan. */}
+              <Pressable
+                onPress={mode === 'existing' ? () => setStep('data') : undefined}
+                style={styles.targetCard}
+              >
                 <Text style={styles.targetLabel}>Mengirim bukti untuk</Text>
                 <Text style={styles.targetTitle}>
                   {activeTarget?.title} · {activeTarget?.participantName}
@@ -477,7 +484,7 @@ export function DisbursementScreen() {
                 {!isOther ? (
                   <Text style={styles.targetAmount}>{formatRupiah(activeTarget?.amount ?? 0)}</Text>
                 ) : null}
-                <Text style={styles.targetChange}>Ubah</Text>
+                {mode === 'existing' ? <Text style={styles.targetChange}>Ubah</Text> : null}
               </Pressable>
 
               {isOther ? (

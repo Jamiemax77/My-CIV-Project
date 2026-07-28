@@ -194,6 +194,9 @@ export function useAddDisbursement() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['adminParticipants'] });
       queryClient.invalidateQueries({ queryKey: ['adminStats'] });
+      // fund-summary sums each participant's disbursements too (their "Total"/"Sisa Dana" on
+      // FundAllocationScreen) — not just the totals a new transfer proof would touch.
+      queryClient.invalidateQueries({ queryKey: ['fundSummary'] });
       queryClient.invalidateQueries({
         queryKey: ['participantDisbursements', variables.participantId],
       });
