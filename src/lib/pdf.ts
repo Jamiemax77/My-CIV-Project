@@ -8,6 +8,15 @@ import { formatDate, formatRupiah } from './format';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
+/** expo-print's web implementation is a bare `window.print()` stub — it never returns
+ * `{ uri }` the way native does, so `printToFileAsync` would otherwise fail deep inside with
+ * an opaque destructuring error. Surface a clear message instead, before attempting it. */
+function assertPdfGenerationSupported(): void {
+  if (Platform.OS === 'web') {
+    throw new Error('Export PDF hanya didukung di aplikasi Android/iOS, belum tersedia di web.');
+  }
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
@@ -88,6 +97,7 @@ export async function generateFullSemesterReportPdf(
   user: UserProfile,
   activities: MonthlyReport[]
 ): Promise<{ uri: string; name: string }> {
+  assertPdfGenerationSupported();
   const html = buildFullSemesterReportHtml(report, user, activities);
   const { uri } = await Print.printToFileAsync({ html, base64: false });
   const name = `${report.fileName || `Laporan-Semester-${report.semesterNumber}`}.pdf`;
@@ -259,6 +269,7 @@ function buildDisbursementVoucherHtml(input: DisbursementVoucherInput): { html: 
 export async function generateDisbursementVoucherPdf(
   input: DisbursementVoucherInput
 ): Promise<{ uri: string; name: string }> {
+  assertPdfGenerationSupported();
   const { html } = buildDisbursementVoucherHtml(input);
   const { uri } = await Print.printToFileAsync({ html, base64: false });
   return archiveGeneratedPdf(uri, {
@@ -317,6 +328,7 @@ function buildTransferProofHtml(input: TransferProofPdfInput): { html: string; d
 export async function generateTransferProofPdf(
   input: TransferProofPdfInput
 ): Promise<{ uri: string; name: string }> {
+  assertPdfGenerationSupported();
   const { html } = buildTransferProofHtml(input);
   const { uri } = await Print.printToFileAsync({ html, base64: false });
   return archiveGeneratedPdf(uri, {
@@ -369,6 +381,7 @@ function buildVerificationActHtml(input: VerificationActInput): { html: string; 
 export async function generateVerificationActPdf(
   input: VerificationActInput
 ): Promise<{ uri: string; name: string }> {
+  assertPdfGenerationSupported();
   const { html } = buildVerificationActHtml(input);
   const { uri } = await Print.printToFileAsync({ html, base64: false });
   return archiveGeneratedPdf(uri, {

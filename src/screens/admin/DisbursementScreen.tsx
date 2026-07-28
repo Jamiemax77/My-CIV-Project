@@ -340,7 +340,10 @@ export function DisbursementScreen() {
   };
 
   const submittingTransfer = uploading || addTransferProof.isPending;
-  const canGoBack = navigation.canGoBack();
+  // Not navigation.canGoBack() — bottom-tabs' default history backBehavior makes that true
+  // just from switching tabs (Dashboard -> Input Dana), which would show a back chevron on
+  // the tab root too. The route name reliably tells the two mount points apart instead.
+  const showBackButton = route.name === 'Disbursement';
 
   const exportVoucher = async (share: boolean) => {
     if (!activeTarget?.disbursementId || !currentAdmin) return;
@@ -417,7 +420,7 @@ export function DisbursementScreen() {
       <Header
         variant="admin"
         title="Pencairan Dana"
-        onBack={canGoBack ? navigation.goBack : undefined}
+        onBack={showBackButton ? navigation.goBack : undefined}
       />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <ResponsiveContainer>
