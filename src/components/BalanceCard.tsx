@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatRupiah } from '../lib/format';
 import { colors, radius } from '../theme';
 
@@ -8,10 +8,14 @@ type BalanceCardProps = {
   label: string;
   amount: number;
   rows: Array<{ label: string; value: number }>;
+  /** Makes the whole card tappable (e.g. admin's hero card drilling into FundAllocation). */
+  onPress?: () => void;
+  /** Extra content below the rows, inside the card (e.g. a "ketuk untuk rincian" hint). */
+  footer?: React.ReactNode;
 };
 
-export function BalanceCard({ label, amount, rows }: BalanceCardProps) {
-  return (
+export function BalanceCard({ label, amount, rows, onPress, footer }: BalanceCardProps) {
+  const content = (
     <LinearGradient
       colors={[colors.navy, colors.blue]}
       start={{ x: 0, y: 0 }}
@@ -28,8 +32,14 @@ export function BalanceCard({ label, amount, rows }: BalanceCardProps) {
           </View>
         ))}
       </View>
+      {footer}
     </LinearGradient>
   );
+
+  if (onPress) {
+    return <Pressable onPress={onPress}>{content}</Pressable>;
+  }
+  return content;
 }
 
 const styles = StyleSheet.create({
@@ -44,12 +54,12 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   label: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#ffffff',
     opacity: 0.85,
   },
   amount: {
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '800',
     color: '#ffffff',
     marginTop: 4,
@@ -60,12 +70,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   rowLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#ffffff',
     opacity: 0.8,
   },
   rowValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
     marginTop: 2,

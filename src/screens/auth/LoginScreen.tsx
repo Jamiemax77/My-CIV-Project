@@ -1,10 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useNavigation } from '@react-navigation/native'
+import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import React, { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -12,6 +13,7 @@ import {
   View
 } from 'react-native'
 import { z } from 'zod'
+import { AuthStackParamList } from '../../app/AuthStack'
 import { Button } from '../../components/Button'
 import { Field } from '../../components/Field'
 import { PinInput } from '../../components/PinInput'
@@ -19,24 +21,24 @@ import { ResponsiveContainer } from '../../components/ResponsiveContainer'
 import { useResponsive } from '../../hooks/useResponsive'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
-import { colors, radius, spacing } from '../../theme'
+import { colors, radius } from '../../theme'
 import { Role } from '../../types/models'
 
 const schema = z.object({
-  identifier: z.string().trim().min(1, 'Email/NIM wajib diisi'),
+  identifier: z.string().trim().min(1, 'Email/Nomor ID wajib diisi'),
   pin: z.string().length(6, 'PIN harus 6 digit angka')
 })
 
 type FormValues = z.infer<typeof schema>
 
 export function LoginScreen () {
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>()
   const [role, setRole] = useState<Role>('participant')
   const [formError, setFormError] = useState<string | null>(null)
   const [checkingIdentifier, setCheckingIdentifier] = useState(false)
   const [pinUnlocked, setPinUnlocked] = useState(false)
   const [identifierNotice, setIdentifierNotice] = useState<string | null>(null)
   const [lastChecked, setLastChecked] = useState('')
-  const [forgotPinOpen, setForgotPinOpen] = useState(false)
   const login = useAuthStore(s => s.login)
   const { isTablet } = useResponsive()
 
@@ -76,7 +78,7 @@ export function LoginScreen () {
       )
       if (!result.exists) {
         setPinUnlocked(false)
-        setIdentifierNotice('Email/NIM tidak terdaftar.')
+        setIdentifierNotice('Email/Nomor ID tidak terdaftar.')
       } else {
         setPinUnlocked(true)
         if (result.role && result.role !== role) {
@@ -98,7 +100,7 @@ export function LoginScreen () {
       name='identifier'
       render={({ field }) => (
         <Field
-          label='Email / NIM'
+          label='Email / Nomor ID'
           placeholder='nama@kampus.ac.id'
           autoCapitalize='none'
           value={field.value}
@@ -142,7 +144,7 @@ export function LoginScreen () {
         <Text style={styles.pinHint}>
           {pinUnlocked
             ? '6 digit angka rahasia Anda'
-            : 'Masukkan Email / NIM yang terdaftar terlebih dahulu'}
+            : 'Masukkan Email / Nomor ID yang terdaftar terlebih dahulu'}
         </Text>
       )}
     </View>
@@ -212,34 +214,10 @@ export function LoginScreen () {
           disabled={checkingIdentifier}
         />
 
-        <Pressable onPress={() => setForgotPinOpen(true)}>
+        <Pressable onPress={() => navigation.navigate('ForgotPin')}>
           <Text style={styles.forgotPin}>Lupa PIN?</Text>
         </Pressable>
       </ResponsiveContainer>
-
-      <Modal
-        visible={forgotPinOpen}
-        transparent
-        animationType='fade'
-        onRequestClose={() => setForgotPinOpen(false)}
-      >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Lupa PIN?</Text>
-            <Text style={styles.modalMessage}>
-              Untuk keamanan, PIN tidak dapat direset sendiri lewat aplikasi.
-              Silakan hubungi admin/staf pengelola PPA — admin akan mengatur
-              ulang PIN Anda ke PIN default, dan Anda akan diminta membuat PIN
-              baru saat login berikutnya.
-            </Text>
-            <Button
-              label='Mengerti'
-              variant='ghost'
-              onPress={() => setForgotPinOpen(false)}
-            />
-          </View>
-        </View>
-      </Modal>
     </KeyboardAvoidingView>
   )
 }
@@ -270,19 +248,19 @@ const styles = StyleSheet.create({
     elevation: 4
   },
   logoText: {
-    fontSize: 32,
+    fontSize: 37,
     fontWeight: '800',
     color: '#ffffff'
   },
   title: {
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: 23,
     fontWeight: '800',
     color: colors.navy
   },
   tag: {
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 14,
     color: colors.muted,
     marginTop: 4,
     marginBottom: 22
@@ -309,7 +287,7 @@ const styles = StyleSheet.create({
     elevation: 1
   },
   roleOptionText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.muted
   },
@@ -325,14 +303,14 @@ const styles = StyleSheet.create({
     flex: 1
   },
   pinLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 8,
     textAlign: 'center'
   },
   pinHint: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     textAlign: 'center',
     marginBottom: 8
@@ -345,48 +323,20 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   checkingText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.royal,
     fontWeight: '600'
   },
   errorText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.danger,
     textAlign: 'center',
     marginBottom: 8
   },
   forgotPin: {
     textAlign: 'center',
-    fontSize: 11,
+    fontSize: 13,
     color: colors.blue,
     marginTop: 14
-  },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(12,34,51,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl
-  },
-  modalCard: {
-    width: '100%',
-    maxWidth: 360,
-    backgroundColor: colors.card,
-    borderRadius: radius.xl,
-    padding: spacing.xl
-  },
-  modalTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
-    textAlign: 'center'
-  },
-  modalMessage: {
-    fontSize: 12,
-    color: colors.muted,
-    textAlign: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-    lineHeight: 18
   }
 })

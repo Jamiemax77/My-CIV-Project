@@ -15,7 +15,7 @@ const LOCKOUT_MINUTES = 15;
 // Per-account lockout (below) already blocks repeated guessing against one identifier;
 // these IP-based limits are the second layer — bound how many identifiers/PINs a single
 // source can try across *different* accounts, and stop /lookup from being used to mass-
-// enumerate valid emails/NIMs. Rejections reuse the ApiError JSON shape the client expects.
+// enumerate valid emails/ID numbers. Rejections reuse the ApiError JSON shape the client expects.
 const authRateLimitHandler = (req, res) => {
   res.status(429).json({ ok: false, error: 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.' });
 };
@@ -43,7 +43,7 @@ router.post(
     const identifier = String(req.body.identifier || '').trim().toLowerCase();
     const pin = String(req.body.pin || '');
     const role = req.body.role;
-    if (!identifier || !pin) throw new ApiError('Email/NIM dan PIN wajib diisi.');
+    if (!identifier || !pin) throw new ApiError('Email/Nomor ID dan PIN wajib diisi.');
     if (role !== 'participant' && role !== 'admin') throw new ApiError('Role tidak valid.');
 
     const [rows] = await pool.query(
@@ -51,7 +51,7 @@ router.post(
       [role, identifier, identifier]
     );
     const profile = rows[0];
-    if (!profile) throw new ApiError('Email/NIM atau PIN salah.', 401);
+    if (!profile) throw new ApiError('Email/Nomor ID atau PIN salah.', 401);
 
     if (profile.locked_until && new Date(profile.locked_until) > new Date()) {
       throw new ApiError('Akun terkunci sementara karena terlalu banyak percobaan gagal. Coba lagi nanti.', 423);
@@ -69,7 +69,7 @@ router.post(
       } else {
         await pool.query('UPDATE profiles SET failed_attempts = ? WHERE id = ?', [attempts, profile.id]);
       }
-      throw new ApiError('Email/NIM atau PIN salah.', 401);
+      throw new ApiError('Email/Nomor ID atau PIN salah.', 401);
     }
 
     await pool.query('UPDATE profiles SET failed_attempts = 0, locked_until = NULL WHERE id = ?', [profile.id]);

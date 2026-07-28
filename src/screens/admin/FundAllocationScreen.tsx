@@ -2,6 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import React, { useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AddFundSourceModal } from '../../components/AddFundSourceModal';
+import { BalanceCard } from '../../components/BalanceCard';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { EmptyState } from '../../components/EmptyState';
@@ -47,24 +48,14 @@ export function FundAllocationScreen() {
             </View>
           ) : (
             <>
-              <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Total Bantuan Dana Pendidikan</Text>
-                <Text style={styles.summaryValue}>{formatRupiah(summary?.totals.sources ?? 0)}</Text>
-                <View style={styles.summaryRow}>
-                  <View>
-                    <Text style={styles.summaryRowLabel}>Digunakan</Text>
-                    <Text style={styles.summaryRowValue}>
-                      {formatRupiah(summary?.totals.received ?? 0)}
-                    </Text>
-                  </View>
-                  <View style={styles.summaryRowRight}>
-                    <Text style={styles.summaryRowLabel}>Sisa Dana</Text>
-                    <Text style={styles.summaryRowValue}>
-                      {formatRupiah(summary?.totals.remaining ?? 0)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
+              <BalanceCard
+                label="Total Bantuan Dana Pendidikan"
+                amount={summary?.totals.sources ?? 0}
+                rows={[
+                  { label: 'Digunakan', value: summary?.totals.received ?? 0 },
+                  { label: 'Sisa Dana', value: summary?.totals.remaining ?? 0 },
+                ]}
+              />
 
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Sumber Dana</Text>
@@ -163,40 +154,6 @@ const styles = StyleSheet.create({
   skeletonGap: {
     marginBottom: 16,
   },
-  summaryCard: {
-    backgroundColor: colors.navy,
-    borderRadius: radius.xl,
-    padding: 18,
-    marginBottom: 20,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  summaryValue: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginTop: 4,
-    marginBottom: 14,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  summaryRowRight: {
-    alignItems: 'flex-end',
-  },
-  summaryRowLabel: {
-    fontSize: 10,
-    color: 'rgba(255,255,255,0.75)',
-  },
-  summaryRowValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginTop: 2,
-  },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,7 +161,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
   },
@@ -219,7 +176,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginBottom: 8,
   },
@@ -232,22 +189,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sourceType: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.royal,
   },
   sourceAmount: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
     color: colors.navy,
   },
   sourceMeta: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 4,
   },
   sourceDesc: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginTop: 4,
   },
@@ -255,12 +212,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   participantName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.text,
   },
   participantId: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 1,
     marginBottom: 10,
@@ -273,11 +230,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statLabel: {
-    fontSize: 9,
+    fontSize: 10,
     color: colors.muted,
   },
   statValue: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.text,
     marginTop: 1,

@@ -1,8 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AdminStackParamList } from '../../app/AdminStack';
+import { BalanceCard } from '../../components/BalanceCard';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
 import { Header } from '../../components/Header';
@@ -15,7 +16,6 @@ import {
   useAdminStats,
   useFundSummary,
 } from '../../hooks/useAdminData';
-import { formatRupiah } from '../../lib/format';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
 
@@ -87,32 +87,20 @@ export function AdminDashboardScreen() {
           </View>
         ) : (
           <>
-            <Pressable
-              style={styles.hero}
+            <BalanceCard
+              label="Bantuan Dana Pendidikan"
+              amount={fundSummary?.totals.sources ?? stats?.totalDisbursed ?? 0}
+              rows={[
+                { label: 'Digunakan', value: fundSummary?.totals.received ?? 0 },
+                { label: 'Sisa Dana', value: fundSummary?.totals.remaining ?? 0 },
+              ]}
               onPress={() => navigation.navigate('FundAllocation')}
-            >
-              <Text style={styles.heroLabel}>Bantuan Dana Pendidikan</Text>
-              <Text style={styles.heroValue}>
-                {formatRupiah(fundSummary?.totals.sources ?? stats?.totalDisbursed ?? 0)}
-              </Text>
-              <View style={styles.heroStatRow}>
-                <View>
-                  <Text style={styles.heroStatLabel}>Digunakan</Text>
-                  <Text style={styles.heroStatValue}>
-                    {formatRupiah(fundSummary?.totals.received ?? 0)}
-                  </Text>
-                </View>
-                <View style={styles.heroStatRight}>
-                  <Text style={styles.heroStatLabel}>Sisa Dana</Text>
-                  <Text style={styles.heroStatValue}>
-                    {formatRupiah(fundSummary?.totals.remaining ?? 0)}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.heroSub}>
-                {stats?.activeParticipants ?? 0} partisipan aktif dari {stats?.totalParticipants ?? 0} terdaftar · Ketuk untuk rincian
-              </Text>
-            </Pressable>
+              footer={
+                <Text style={styles.heroSub}>
+                  {stats?.activeParticipants ?? 0} partisipan aktif dari {stats?.totalParticipants ?? 0} terdaftar · Ketuk untuk rincian
+                </Text>
+              }
+            />
 
             <View style={styles.statGrid}>
               <StatCard
@@ -166,40 +154,6 @@ const styles = StyleSheet.create({
   },
   skeletonGap: {
     marginTop: 12,
-  },
-  hero: {
-    backgroundColor: colors.navy,
-    borderRadius: radius.xl,
-    padding: 18,
-    marginBottom: 16,
-  },
-  heroLabel: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
-  },
-  heroValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#ffffff',
-    marginTop: 4,
-  },
-  heroStatRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 14,
-  },
-  heroStatRight: {
-    alignItems: 'flex-end',
-  },
-  heroStatLabel: {
-    fontSize: 12,
-    color: 'rgba(255,255,255,0.75)',
-  },
-  heroStatValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginTop: 2,
   },
   heroSub: {
     fontSize: 13,
