@@ -340,6 +340,31 @@ export function DisbursementScreen() {
   };
 
   const submittingTransfer = uploading || addTransferProof.isPending;
+
+  // "existing" mode's Step 1 is pure selection (no side effect), so going back just re-shows
+  // it. "new" mode already created the Disbursement record in Step 1 — going back must NOT
+  // re-arm that same submit (would POST a second, duplicate record), so it resets to a blank
+  // Step 1 instead. The disbursement itself stays saved either way, retrievable afterwards via
+  // "Kirim Bukti untuk Pencairan Tersimpan".
+  const goBackFromTransfer = () => {
+    if (mode === 'existing') {
+      setStep('data');
+      return;
+    }
+    const savedFor = activeTarget?.participantName;
+    setActiveTarget(null);
+    setFile(null);
+    setFileError(null);
+    transferForm.reset({ method: 'transfer', senderBank: 'Bank Mandiri', destAccount: '', referenceNo: '', amount: '' });
+    dataForm.reset({ participantId: '', program: SCHOLARSHIP_TYPES[0], period: PERIODS[0], amount: '', note: '' });
+    autoFilledForRef.current = null;
+    setStep('data');
+    if (savedFor) {
+      setSavedMessage(
+        `Pencairan untuk ${savedFor} sudah tersimpan. Kirim buktinya kapan saja lewat "Kirim Bukti untuk Pencairan Tersimpan".`
+      );
+    }
+  };
   // Not navigation.canGoBack() — bottom-tabs' default history backBehavior makes that true
   // just from switching tabs (Dashboard -> Input Dana), which would show a back chevron on
   // the tab root too. The route name reliably tells the two mount points apart instead.
@@ -778,13 +803,23 @@ export function DisbursementScreen() {
               {submitError ? <Text style={styles.errorText}>{submitError}</Text> : null}
               {savedMessage ? <Text style={styles.success}>{savedMessage}</Text> : null}
 
-              <Button
-                label={submittingTransfer ? 'Mengirim...' : 'Kirim ke Partisipan'}
-                variant="navy"
-                onPress={transferForm.handleSubmit(submitTransfer)}
-                disabled={submittingTransfer}
-                loading={submittingTransfer}
-              />
+              <View style={styles.btnRow}>
+                <Button
+                  label="Kembali"
+                  variant="ghost"
+                  style={styles.btn}
+                  onPress={goBackFromTransfer}
+                  disabled={submittingTransfer}
+                />
+                <Button
+                  label={submittingTransfer ? 'Mengirim...' : 'Kirim ke Partisipan'}
+                  variant="navy"
+                  style={styles.btn}
+                  onPress={transferForm.handleSubmit(submitTransfer)}
+                  disabled={submittingTransfer}
+                  loading={submittingTransfer}
+                />
+              </View>
             </>
           )}
         </ResponsiveContainer>
