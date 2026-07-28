@@ -235,6 +235,7 @@ export interface KhsUpload {
   participantId: string;
   semesterNumber: number;
   fileId?: string;
+  krsFileId?: string;
   uploadedAt: string;
 }
 

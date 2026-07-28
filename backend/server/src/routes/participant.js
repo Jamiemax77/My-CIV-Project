@@ -478,10 +478,12 @@ router.get(
 router.post(
   '/khs',
   asyncHandler(async (req, res) => {
-    const { semesterNumber, fileId } = req.body;
+    // fileId (KHS) and krsFileId (KRS) are independent — either or both may be present, since
+    // "Unggah KHS" and "Unggah KRS" are now two separate buttons that each POST on their own.
+    const { semesterNumber, fileId, krsFileId } = req.body;
     const semNum = Number(semesterNumber);
-    if (!semNum || semNum < 1 || semNum > 8) throw new ApiError('Semester KHS tidak valid.');
-    if (!fileId) throw new ApiError('Berkas KHS wajib diunggah.');
+    if (!semNum || semNum < 1 || semNum > 8) throw new ApiError('Semester tidak valid.');
+    if (!fileId && !krsFileId) throw new ApiError('Berkas KHS atau KRS wajib diunggah.');
 
     const [existingRows] = await pool.query(
       'SELECT id FROM khs_uploads WHERE participant_id = ? AND semester_number = ? LIMIT 1',
@@ -489,16 +491,24 @@ router.post(
     );
     const existing = existingRows[0];
     if (existing) {
-      await pool.query('UPDATE khs_uploads SET file_id = ?, uploaded_at = NOW() WHERE id = ?', [
-        fileId,
-        existing.id,
-      ]);
+      if (fileId) {
+        await pool.query('UPDATE khs_uploads SET file_id = ?, uploaded_at = NOW() WHERE id = ?', [
+          fileId,
+          existing.id,
+        ]);
+      }
+      if (krsFileId) {
+        await pool.query('UPDATE khs_uploads SET krs_file_id = ?, uploaded_at = NOW() WHERE id = ?', [
+          krsFileId,
+          existing.id,
+        ]);
+      }
       res.json({ ok: true, data: { id: existing.id } });
     } else {
       const id = makeId('khs');
       await pool.query(
-        'INSERT INTO khs_uploads (id, participant_id, semester_number, file_id) VALUES (?, ?, ?, ?)',
-        [id, req.session.profileId, semNum, fileId]
+        'INSERT INTO khs_uploads (id, participant_id, semester_number, file_id, krs_file_id) VALUES (?, ?, ?, ?, ?)',
+        [id, req.session.profileId, semNum, fileId || null, krsFileId || null]
       );
       res.status(201).json({ ok: true, data: { id } });
     }

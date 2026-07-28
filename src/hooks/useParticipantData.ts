@@ -144,7 +144,7 @@ export function useUploadKhs() {
   const token = useToken();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { semesterNumber: number; fileId: string }) =>
+    mutationFn: (input: { semesterNumber: number; fileId?: string; krsFileId?: string }) =>
       api.post<{ id: string }>('/participant/khs', input, token),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['khsUploads'] });

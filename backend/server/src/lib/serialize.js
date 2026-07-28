@@ -132,6 +132,7 @@ function khsUploadToPublic(row) {
     participantId: row.participant_id,
     semesterNumber: row.semester_number,
     fileId: row.file_id || undefined,
+    krsFileId: row.krs_file_id || undefined,
     uploadedAt: row.uploaded_at,
   };
 }

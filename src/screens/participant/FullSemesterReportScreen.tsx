@@ -5,7 +5,6 @@ import * as DocumentPicker from 'expo-document-picker';
 import React from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import {
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 import { z } from 'zod';
 import { AddMonthlyReportModal, NewMonthlyReportInput } from '../../components/AddMonthlyReportModal';
+import { AuthImage } from '../../components/AuthImage';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -43,7 +43,7 @@ import {
   useUploadCommitmentStatement,
   useUploadKhs,
 } from '../../hooks/useParticipantData';
-import { buildFileUrl, uploadFile } from '../../lib/api';
+import { uploadFile } from '../../lib/api';
 import { formatAmountInput, formatDate, parseAmountInput } from '../../lib/format';
 import { generateFullSemesterReportPdf, openLocalFile } from '../../lib/pdf';
 import { useAuthStore } from '../../store/authStore';
@@ -133,7 +133,10 @@ export function FullSemesterReportScreen() {
 
   const [academicError, setAcademicError] = React.useState<string | null>(null);
   const [khsError, setKhsError] = React.useState<string | null>(null);
-  const [uploadingKhsSemester, setUploadingKhsSemester] = React.useState<number | null>(null);
+  const [uploadingKhs, setUploadingKhs] = React.useState<{
+    semester: number;
+    docType: 'khs' | 'krs';
+  } | null>(null);
   const [stmtError, setStmtError] = React.useState<string | null>(null);
   const [uploadingStmt, setUploadingStmt] = React.useState<'participant' | 'guardian' | null>(null);
   const [activityModalOpen, setActivityModalOpen] = React.useState(false);
@@ -193,7 +196,7 @@ export function FullSemesterReportScreen() {
     }
   };
 
-  const pickAndUploadKhs = async (semesterNumber: number) => {
+  const pickAndUploadKhs = async (semesterNumber: number, docType: 'khs' | 'krs') => {
     const result = await DocumentPicker.getDocumentAsync({
       type: ['image/*', 'application/pdf'],
       copyToCacheDirectory: true,
@@ -201,14 +204,20 @@ export function FullSemesterReportScreen() {
     if (result.canceled) return;
     const asset = result.assets[0];
     setKhsError(null);
-    setUploadingKhsSemester(semesterNumber);
+    setUploadingKhs({ semester: semesterNumber, docType });
     try {
-      const uploaded = await uploadFile({ uri: asset.uri, name: asset.name }, 'khs', token, user?.id);
-      await uploadKhs.mutateAsync({ semesterNumber, fileId: uploaded.fileId });
+      const uploaded = await uploadFile({ uri: asset.uri, name: asset.name }, docType, token, user?.id);
+      await uploadKhs.mutateAsync({
+        semesterNumber,
+        fileId: docType === 'khs' ? uploaded.fileId : undefined,
+        krsFileId: docType === 'krs' ? uploaded.fileId : undefined,
+      });
     } catch (err) {
-      setKhsError(err instanceof Error ? err.message : 'Gagal mengunggah KHS.');
+      setKhsError(
+        err instanceof Error ? err.message : `Gagal mengunggah ${docType === 'khs' ? 'KHS' : 'KRS'}.`
+      );
     } finally {
-      setUploadingKhsSemester(null);
+      setUploadingKhs(null);
     }
   };
 
@@ -657,26 +666,50 @@ export function FullSemesterReportScreen() {
                 </>
               )}
 
-              {/* 5. Unggah KHS */}
-              <Text style={[styles.sectionTitle, styles.gapTop]}>Unggah KHS</Text>
+              {/* 5. Unggah KHS/KRS */}
+              <Text style={[styles.sectionTitle, styles.gapTop]}>Unggah KHS/KRS</Text>
               <Card style={styles.gapBottom}>
                 {KHS_SEMESTERS.map((sem) => {
-                  const existing = khsUploads?.find((k) => k.semesterNumber === sem && k.fileId);
+                  const entry = khsUploads?.find((k) => k.semesterNumber === sem);
+                  const khsDone = !!entry?.fileId;
+                  const krsDone = !!entry?.krsFileId;
                   return (
-                    <View key={sem} style={styles.uploadRow}>
+                    <View key={sem} style={styles.khsKrsRow}>
                       <Text style={styles.uploadLabel}>Semester {ROMAN[sem - 1]}</Text>
-                      {existing ? (
-                        <Badge status="approved" label="Sudah diunggah" />
-                      ) : (
-                        <Button
-                          label={uploadingKhsSemester === sem ? 'Mengunggah...' : 'Unggah'}
-                          variant="ghost"
-                          style={styles.uploadBtn}
-                          disabled={uploadingKhsSemester !== null}
-                          loading={uploadingKhsSemester === sem}
-                          onPress={() => pickAndUploadKhs(sem)}
-                        />
-                      )}
+                      <View style={styles.khsKrsBtnRow}>
+                        {khsDone ? (
+                          <Badge status="approved" label="KHS ✓" />
+                        ) : (
+                          <Button
+                            label={
+                              uploadingKhs?.semester === sem && uploadingKhs.docType === 'khs'
+                                ? 'Mengunggah...'
+                                : 'Unggah KHS'
+                            }
+                            variant="ghost"
+                            style={styles.khsKrsBtn}
+                            disabled={uploadingKhs !== null}
+                            loading={uploadingKhs?.semester === sem && uploadingKhs.docType === 'khs'}
+                            onPress={() => pickAndUploadKhs(sem, 'khs')}
+                          />
+                        )}
+                        {krsDone ? (
+                          <Badge status="approved" label="KRS ✓" />
+                        ) : (
+                          <Button
+                            label={
+                              uploadingKhs?.semester === sem && uploadingKhs.docType === 'krs'
+                                ? 'Mengunggah...'
+                                : 'Unggah KRS'
+                            }
+                            variant="ghost"
+                            style={styles.khsKrsBtn}
+                            disabled={uploadingKhs !== null}
+                            loading={uploadingKhs?.semester === sem && uploadingKhs.docType === 'krs'}
+                            onPress={() => pickAndUploadKhs(sem, 'krs')}
+                          />
+                        )}
+                      </View>
                     </View>
                   );
                 })}
@@ -765,13 +798,7 @@ export function FullSemesterReportScreen() {
                               color={linked ? colors.royal : colors.muted}
                             />
                             {m.fileId ? (
-                              <Image
-                                source={{
-                                  uri: buildFileUrl(m.fileId),
-                                  headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-                                }}
-                                style={styles.activityPhoto}
-                              />
+                              <AuthImage fileId={m.fileId} token={token} style={styles.activityPhoto} />
                             ) : null}
                             <View style={styles.activityMain}>
                               <Text style={styles.activityDate}>{formatDate(m.reportDate)}</Text>
@@ -872,14 +899,14 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16 },
   semesterBanner: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.navy,
     textAlign: 'center',
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
@@ -898,18 +925,18 @@ const styles = StyleSheet.create({
   },
   checklistLabel: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginRight: 8,
   },
   fileName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.navy,
     textAlign: 'center',
   },
   myJournal: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.muted,
     textAlign: 'center',
@@ -917,20 +944,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   charCounter: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     textAlign: 'right',
     marginTop: -8,
     marginBottom: 8,
   },
   lockedNote: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     lineHeight: 17,
     marginTop: 8,
   },
   headerInfo: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginBottom: 12,
   },
@@ -943,7 +970,7 @@ const styles = StyleSheet.create({
   },
   academicInfoText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
   },
   academicInfoEditBtn: {
@@ -960,7 +987,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 4,
     marginBottom: 4,
@@ -970,7 +997,7 @@ const styles = StyleSheet.create({
   },
   tableCell: {
     width: 64,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     paddingVertical: 6,
     paddingHorizontal: 4,
@@ -998,7 +1025,7 @@ const styles = StyleSheet.create({
   },
   uploadLabel: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginRight: 8,
   },
@@ -1008,11 +1035,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
   },
+  khsKrsRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderColor: colors.line,
+  },
+  khsKrsBtnRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 6,
+  },
+  khsKrsBtn: {
+    flex: 1,
+    marginTop: 0,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
   sendDocsBtn: {
     marginTop: 10,
   },
   trackTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.navy,
     textAlign: 'center',
@@ -1042,7 +1085,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   summaryLabelText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.navy,
   },
@@ -1055,14 +1098,14 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   summaryValueText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.text,
   },
   summaryHeadCell: {
     backgroundColor: '#f6b989',
   },
   summaryHeadText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.navy,
   },
@@ -1075,7 +1118,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
   },
   summaryMetaLabelText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: '#ffffff',
   },
@@ -1087,7 +1130,7 @@ const styles = StyleSheet.create({
     borderColor: colors.line,
   },
   summaryMetaValueText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '600',
     color: colors.text,
   },
@@ -1111,12 +1154,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityDate: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.navy,
   },
   activityDesc: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginTop: 2,
   },

@@ -113,6 +113,7 @@ CREATE TABLE IF NOT EXISTS khs_uploads (
   participant_id VARCHAR(40) NOT NULL,
   semester_number INT NOT NULL,
   file_id VARCHAR(500),
+  krs_file_id VARCHAR(500),
   uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (participant_id) REFERENCES profiles(id) ON DELETE CASCADE,
   UNIQUE KEY uq_khs_semester (participant_id, semester_number)
