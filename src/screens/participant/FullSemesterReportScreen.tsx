@@ -133,6 +133,7 @@ export function FullSemesterReportScreen() {
 
   const [academicError, setAcademicError] = React.useState<string | null>(null);
   const [khsError, setKhsError] = React.useState<string | null>(null);
+  const [khsSuccessMessage, setKhsSuccessMessage] = React.useState<string | null>(null);
   const [uploadingKhs, setUploadingKhs] = React.useState<{
     semester: number;
     docType: 'khs' | 'krs';
@@ -203,7 +204,9 @@ export function FullSemesterReportScreen() {
     });
     if (result.canceled) return;
     const asset = result.assets[0];
+    const label = `Semester ${ROMAN[semesterNumber - 1]} - ${docType === 'khs' ? 'KHS' : 'KRS'}`;
     setKhsError(null);
+    setKhsSuccessMessage(null);
     setUploadingKhs({ semester: semesterNumber, docType });
     try {
       const uploaded = await uploadFile({ uri: asset.uri, name: asset.name }, docType, token, user?.id);
@@ -212,10 +215,12 @@ export function FullSemesterReportScreen() {
         fileId: docType === 'khs' ? uploaded.fileId : undefined,
         krsFileId: docType === 'krs' ? uploaded.fileId : undefined,
       });
+      // Explicit confirmation independent of the badge — the badge only appears once the
+      // khsUploads query refetches, which isn't always instant/obvious, and this is exactly
+      // what left participants unsure whether an upload (esp. KRS) actually went through.
+      setKhsSuccessMessage(`${label} berhasil diunggah.`);
     } catch (err) {
-      setKhsError(
-        err instanceof Error ? err.message : `Gagal mengunggah ${docType === 'khs' ? 'KHS' : 'KRS'}.`
-      );
+      setKhsError(`${label}: ${err instanceof Error ? err.message : 'Gagal mengunggah.'}`);
     } finally {
       setUploadingKhs(null);
     }
@@ -714,6 +719,7 @@ export function FullSemesterReportScreen() {
                   );
                 })}
                 {khsError ? <Text style={styles.errorText}>{khsError}</Text> : null}
+                {khsSuccessMessage ? <Text style={styles.khsSuccess}>{khsSuccessMessage}</Text> : null}
               </Card>
 
               {/* 7. Unggahan Pernyataan */}
@@ -989,6 +995,13 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     color: colors.danger,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  khsSuccess: {
+    fontSize: 12,
+    color: colors.accent,
+    fontWeight: '600',
     marginTop: 4,
     marginBottom: 4,
   },
