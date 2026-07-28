@@ -13,17 +13,20 @@ import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
 import { ReimbursementItem, ReviewStatus } from '../../types/models';
 
-const FILTERS: Array<{ key: ReviewStatus; label: string }> = [
+type FilterKey = 'all' | ReviewStatus;
+
+const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: 'pending', label: 'Menunggu' },
   { key: 'approved', label: 'Disetujui' },
   { key: 'rejected', label: 'Ditolak' },
+  { key: 'all', label: 'Semua' },
 ];
 
 export function VerifyReimbursementScreen() {
   const token = useAuthStore((s) => s.token);
   const { data: reimbursements, isLoading, isError, refetch } = useAdminReimbursements();
   const reviewReimbursement = useReviewReimbursement();
-  const [filter, setFilter] = useState<ReviewStatus>('pending');
+  const [filter, setFilter] = useState<FilterKey>('pending');
   const [previewTarget, setPreviewTarget] = useState<ReimbursementItem | null>(null);
 
   const pendingCount = useMemo(
@@ -31,7 +34,7 @@ export function VerifyReimbursementScreen() {
     [reimbursements]
   );
 
-  const items = (reimbursements ?? []).filter((r) => r.status === filter);
+  const items = (reimbursements ?? []).filter((r) => filter === 'all' || r.status === filter);
 
   if (isLoading) {
     return (
@@ -87,7 +90,7 @@ export function VerifyReimbursementScreen() {
             ]}
             docLabel={item.proofFileName}
             onDocPress={() => setPreviewTarget(item)}
-            readOnly={filter !== 'pending'}
+            readOnly={item.status !== 'pending'}
             onReject={() => reviewReimbursement.mutate({ id: item.id, status: 'rejected' })}
             onApprove={() => reviewReimbursement.mutate({ id: item.id, status: 'approved' })}
           />
@@ -111,7 +114,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   amount: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     color: colors.navy,
   },

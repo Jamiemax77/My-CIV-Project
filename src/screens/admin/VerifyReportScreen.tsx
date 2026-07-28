@@ -13,17 +13,20 @@ import { useAuthStore } from '../../store/authStore';
 import { radius } from '../../theme';
 import { ReportItem, ReportStatus } from '../../types/models';
 
-const FILTERS: Array<{ key: ReportStatus; label: string }> = [
+type FilterKey = 'all' | ReportStatus;
+
+const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: 'pending', label: 'Menunggu' },
   { key: 'verified', label: 'Terverifikasi' },
   { key: 'revision', label: 'Revisi' },
+  { key: 'all', label: 'Semua' },
 ];
 
 export function VerifyReportScreen() {
   const token = useAuthStore((s) => s.token);
   const { data: reports, isLoading, isError, refetch } = useAdminReports();
   const reviewReport = useReviewReport();
-  const [filter, setFilter] = useState<ReportStatus>('pending');
+  const [filter, setFilter] = useState<FilterKey>('pending');
   const [previewTarget, setPreviewTarget] = useState<ReportItem | null>(null);
 
   const pendingCount = useMemo(
@@ -31,7 +34,7 @@ export function VerifyReportScreen() {
     [reports]
   );
 
-  const items = (reports ?? []).filter((r) => r.status === filter);
+  const items = (reports ?? []).filter((r) => filter === 'all' || r.status === filter);
 
   if (isLoading) {
     return (
@@ -108,7 +111,7 @@ export function VerifyReportScreen() {
             onDocPress={() => setPreviewTarget(item)}
             approveLabel="Verifikasi"
             rejectLabel="Minta Revisi"
-            readOnly={filter !== 'pending'}
+            readOnly={item.status !== 'pending'}
             onReject={() => reviewReport.mutate({ id: item.id, status: 'revision' })}
             onApprove={() => reviewReport.mutate({ id: item.id, status: 'verified' })}
           />

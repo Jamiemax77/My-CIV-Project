@@ -13,23 +13,26 @@ import { formatDate, formatRupiah } from '../../lib/format';
 import { colors, radius } from '../../theme';
 import { ReportStatus } from '../../types/models';
 
-const FILTERS: Array<{ key: ReportStatus; label: string }> = [
+type FilterKey = 'all' | ReportStatus;
+
+const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: 'pending', label: 'Menunggu' },
   { key: 'verified', label: 'Terverifikasi' },
   { key: 'revision', label: 'Revisi' },
+  { key: 'all', label: 'Semua' },
 ];
 
 export function VerifyFullSemesterReportScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const { data: reports, isLoading, isError, refetch } = useAdminFullSemesterReports();
-  const [filter, setFilter] = useState<ReportStatus>('pending');
+  const [filter, setFilter] = useState<FilterKey>('pending');
 
   const pendingCount = useMemo(
     () => (reports ?? []).filter((r) => r.status === 'pending').length,
     [reports]
   );
 
-  const items = (reports ?? []).filter((r) => r.status === filter);
+  const items = (reports ?? []).filter((r) => filter === 'all' || r.status === filter);
 
   if (isLoading) {
     return (
@@ -119,7 +122,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   amount: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
     color: colors.navy,
   },
