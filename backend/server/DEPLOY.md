@@ -25,6 +25,9 @@ in order:
 mysql -u civ_user -p civ_project < migrations/001_full_semester_report_draft_pdf.sql
 mysql -u civ_user -p civ_project < migrations/002_transfer_proof_note.sql
 mysql -u civ_user -p civ_project < migrations/003_transfer_proof_method.sql
+mysql -u civ_user -p civ_project < migrations/004_pin_reset_requests.sql
+mysql -u civ_user -p civ_project < migrations/005_notifications.sql
+mysql -u civ_user -p civ_project < migrations/006_disbursement_sent_status.sql
 ```
 
 ## 2. Create the site

@@ -3,6 +3,7 @@ const { pool } = require('../db');
 const { makeId } = require('../lib/id');
 const { hashPin } = require('../lib/password');
 const { ApiError, asyncHandler } = require('../lib/errors');
+const { notifyProfile } = require('../lib/notify');
 const {
   profileToPublic,
   reimbursementToPublic,
@@ -11,6 +12,7 @@ const {
   fundSourceToPublic,
   fullSemesterReportToPublic,
   monthlyReportToPublic,
+  pinResetRequestToPublic,
 } = require('../lib/serialize');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -154,19 +156,76 @@ router.patch(
       [scholarshipType, req.params.id]
     );
     if (result.affectedRows === 0) throw new ApiError('Partisipan tidak ditemukan.', 404);
+
+    await notifyProfile(req.params.id, {
+      type: 'scholarship_type_updated',
+      title: 'Jenis bantuan beasiswa diperbarui',
+      body: `Jenis bantuan Anda diatur admin menjadi "${scholarshipType}".`,
+      data: { scholarshipType },
+    });
+
     res.json({ ok: true, data: { ok: true } });
   })
 );
 
-router.patch(
-  '/participants/:id/reset-pin',
+router.get(
+  '/participants/:id/pin-reset-requests',
   asyncHandler(async (req, res) => {
-    const pinHash = await hashPin(DEFAULT_PIN);
-    const [result] = await pool.query(
-      "UPDATE profiles SET pin_hash = ?, must_change_pin = TRUE, failed_attempts = 0, locked_until = NULL WHERE id = ? AND role = 'participant'",
-      [pinHash, req.params.id]
+    const [rows] = await pool.query(
+      'SELECT * FROM pin_reset_requests WHERE participant_id = ? ORDER BY created_at DESC',
+      [req.params.id]
     );
-    if (result.affectedRows === 0) throw new ApiError('Partisipan tidak ditemukan.', 404);
+    res.json({ ok: true, data: rows.map(pinResetRequestToPublic) });
+  })
+);
+
+// The "Reset PIN ke Default" button on ParticipantDetailScreen only activates once a
+// 'pending' row exists here — admin reviews the 3 submitted selfies, then approves
+// (which resets the PIN, same as the old unconditional endpoint used to) or rejects.
+router.post(
+  '/pin-reset-requests/:id/review',
+  asyncHandler(async (req, res) => {
+    const { status } = req.body;
+    if (status !== 'approved' && status !== 'rejected') throw new ApiError('Status tidak valid.');
+
+    const [rows] = await pool.query(
+      "SELECT * FROM pin_reset_requests WHERE id = ? AND status = 'pending' LIMIT 1",
+      [req.params.id]
+    );
+    const request = rows[0];
+    if (!request) throw new ApiError('Permintaan tidak ditemukan atau sudah diproses.', 404);
+
+    if (status === 'approved') {
+      const pinHash = await hashPin(DEFAULT_PIN);
+      await pool.query(
+        "UPDATE profiles SET pin_hash = ?, must_change_pin = TRUE, failed_attempts = 0, locked_until = NULL WHERE id = ?",
+        [pinHash, request.participant_id]
+      );
+    }
+
+    await pool.query(
+      'UPDATE pin_reset_requests SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
+      [status, req.session.profileId, req.params.id]
+    );
+
+    await notifyProfile(
+      request.participant_id,
+      status === 'approved'
+        ? {
+            type: 'pin_reset_reviewed',
+            title: 'PIN Anda telah direset',
+            body: 'PIN Anda direset ke PIN default. Login lalu buat PIN baru.',
+            data: { requestId: req.params.id, status },
+          }
+        : {
+            type: 'pin_reset_reviewed',
+            title: 'Permintaan reset PIN ditolak',
+            body: 'Admin menolak permintaan reset PIN Anda. Hubungi admin untuk info lebih lanjut.',
+            data: { requestId: req.params.id, status },
+          },
+      { push: true }
+    );
+
     res.json({ ok: true, data: { ok: true } });
   })
 );
@@ -284,10 +343,20 @@ router.get(
 router.get(
   '/participants/:id/disbursements',
   asyncHandler(async (req, res) => {
-    const [rows] = await pool.query(
-      "SELECT * FROM disbursements WHERE participant_id = ? AND status != 'draft' ORDER BY created_at DESC",
-      [req.params.id]
-    );
+    // Default: disbursement history (draft excluded). `?needsProof=1`: candidates for the
+    // "attach bukti transfer" step — anything not yet sent and without a linked proof,
+    // drafts included since sending a proof for one also finalizes it.
+    const needsProof = req.query.needsProof === '1';
+    const sql = needsProof
+      ? `SELECT d.*, tp.id AS transfer_proof_id FROM disbursements d
+         LEFT JOIN transfer_proofs tp ON tp.disbursement_id = d.id
+         WHERE d.participant_id = ? AND d.status != 'sent' AND tp.id IS NULL
+         ORDER BY d.created_at DESC`
+      : `SELECT d.*, tp.id AS transfer_proof_id FROM disbursements d
+         LEFT JOIN transfer_proofs tp ON tp.disbursement_id = d.id
+         WHERE d.participant_id = ? AND d.status != 'draft'
+         ORDER BY d.created_at DESC`;
+    const [rows] = await pool.query(sql, [req.params.id]);
     res.json({
       ok: true,
       data: rows.map((d) => ({
@@ -295,6 +364,8 @@ router.get(
         title: d.title,
         amount: Number(d.amount),
         disbursedAt: d.disbursed_at,
+        status: d.status,
+        hasProof: !!d.transfer_proof_id,
       })),
     });
   })
@@ -332,6 +403,16 @@ router.post(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [id, participantId, title, amount, period || null, disbursedAt || new Date(), note || null, status || 'disbursed']
     );
+
+    if ((status || 'disbursed') !== 'draft') {
+      await notifyProfile(participantId, {
+        type: 'disbursement_created',
+        title: 'Dana beasiswa dicairkan',
+        body: `Pencairan "${title}" sebesar ${Number(amount).toLocaleString('id-ID')} telah dicatat.`,
+        data: { disbursementId: id },
+      });
+    }
+
     res.status(201).json({ ok: true, data: { id } });
   })
 );
@@ -354,11 +435,27 @@ router.post(
   asyncHandler(async (req, res) => {
     const { status } = req.body;
     if (status !== 'approved' && status !== 'rejected') throw new ApiError('Status tidak valid.');
-    const [result] = await pool.query(
+    const [rows] = await pool.query('SELECT * FROM reimbursements WHERE id = ? LIMIT 1', [
+      req.params.id,
+    ]);
+    const reimbursement = rows[0];
+    if (!reimbursement) throw new ApiError('Data tidak ditemukan.', 404);
+
+    await pool.query(
       'UPDATE reimbursements SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
       [status, req.session.profileId, req.params.id]
     );
-    if (result.affectedRows === 0) throw new ApiError('Data tidak ditemukan.', 404);
+
+    await notifyProfile(reimbursement.participant_id, {
+      type: 'reimbursement_reviewed',
+      title: status === 'approved' ? 'Pengembalian dana disetujui' : 'Pengembalian dana ditolak',
+      body:
+        status === 'approved'
+          ? 'Pengajuan pengembalian dana Anda disetujui admin.'
+          : 'Pengajuan pengembalian dana Anda ditolak admin.',
+      data: { reimbursementId: req.params.id, status },
+    });
+
     res.json({ ok: true, data: { ok: true } });
   })
 );
@@ -382,11 +479,25 @@ router.post(
   asyncHandler(async (req, res) => {
     const { status } = req.body;
     if (status !== 'verified' && status !== 'revision') throw new ApiError('Status tidak valid.');
-    const [result] = await pool.query(
+    const [rows] = await pool.query('SELECT * FROM reports WHERE id = ? LIMIT 1', [req.params.id]);
+    const report = rows[0];
+    if (!report) throw new ApiError('Data tidak ditemukan.', 404);
+
+    await pool.query(
       'UPDATE reports SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
       [status, req.session.profileId, req.params.id]
     );
-    if (result.affectedRows === 0) throw new ApiError('Data tidak ditemukan.', 404);
+
+    await notifyProfile(report.participant_id, {
+      type: 'report_reviewed',
+      title: status === 'verified' ? 'Laporan nilai diverifikasi' : 'Laporan nilai perlu revisi',
+      body:
+        status === 'verified'
+          ? 'Laporan nilai Anda telah diverifikasi admin.'
+          : 'Laporan nilai Anda perlu direvisi. Cek catatan admin.',
+      data: { reportId: req.params.id, status },
+    });
+
     res.json({ ok: true, data: { ok: true } });
   })
 );
@@ -469,11 +580,28 @@ router.post(
   asyncHandler(async (req, res) => {
     const { status } = req.body;
     if (status !== 'verified' && status !== 'revision') throw new ApiError('Status tidak valid.');
-    const [result] = await pool.query(
+    const [rows] = await pool.query('SELECT * FROM full_semester_reports WHERE id = ? LIMIT 1', [
+      req.params.id,
+    ]);
+    const report = rows[0];
+    if (!report) throw new ApiError('Data tidak ditemukan.', 404);
+
+    await pool.query(
       'UPDATE full_semester_reports SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?',
       [status, req.session.profileId, req.params.id]
     );
-    if (result.affectedRows === 0) throw new ApiError('Data tidak ditemukan.', 404);
+
+    await notifyProfile(report.participant_id, {
+      type: 'full_semester_report_reviewed',
+      title:
+        status === 'verified' ? 'Laporan Semester Lengkap diverifikasi' : 'Laporan Semester Lengkap perlu revisi',
+      body:
+        status === 'verified'
+          ? 'Laporan Semester Lengkap Anda telah diverifikasi admin.'
+          : 'Laporan Semester Lengkap Anda perlu direvisi. Cek catatan admin.',
+      data: { reportId: req.params.id, status },
+    });
+
     res.json({ ok: true, data: { ok: true } });
   })
 );
@@ -526,6 +654,18 @@ router.post(
         proofFileName || null,
       ]
     );
+
+    if (disbursementId) {
+      await pool.query("UPDATE disbursements SET status = 'sent' WHERE id = ?", [disbursementId]);
+    }
+
+    await notifyProfile(participantId, {
+      type: 'transfer_proof_created',
+      title: 'Bukti transfer diterima',
+      body: `Transfer sebesar ${Number(amount).toLocaleString('id-ID')} telah dicatat admin.`,
+      data: { transferProofId: id },
+    });
+
     res.status(201).json({ ok: true, data: { id } });
   })
 );

@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   must_change_pin BOOLEAN NOT NULL DEFAULT FALSE,
   failed_attempts INT NOT NULL DEFAULT 0,
   locked_until DATETIME NULL,
+  push_token VARCHAR(255) NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_profiles_email (email),
   UNIQUE KEY uq_profiles_id_number (id_number)
@@ -48,7 +49,7 @@ CREATE TABLE IF NOT EXISTS disbursements (
   period VARCHAR(50),
   disbursed_at DATE,
   note TEXT,
-  status ENUM('draft', 'disbursed') NOT NULL DEFAULT 'disbursed',
+  status ENUM('draft', 'disbursed', 'sent') NOT NULL DEFAULT 'disbursed',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (participant_id) REFERENCES profiles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -181,4 +182,37 @@ CREATE TABLE IF NOT EXISTS transfer_proofs (
   proof_name VARCHAR(255),
   confirmed_by_participant BOOLEAN NOT NULL DEFAULT FALSE,
   FOREIGN KEY (participant_id) REFERENCES profiles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Participant-initiated "lupa PIN" request, submitted before login (identified by
+-- email/NIM only, no session). Carries 3 selfies (depan/kiri/kanan) for admin to
+-- manually review before approving the reset — see ParticipantDetailScreen's
+-- "Reset PIN ke Default" button, which only activates while a 'pending' row exists.
+CREATE TABLE IF NOT EXISTS pin_reset_requests (
+  id VARCHAR(40) PRIMARY KEY,
+  participant_id VARCHAR(40) NOT NULL,
+  status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+  selfie_front_path VARCHAR(500) NOT NULL,
+  selfie_left_path VARCHAR(500) NOT NULL,
+  selfie_right_path VARCHAR(500) NOT NULL,
+  reviewed_by VARCHAR(40),
+  reviewed_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (participant_id) REFERENCES profiles(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tiered notification system: every event below always writes an in-app row here
+-- (read via the bell/"Notifikasi" menu); `push_sent` events additionally fan out
+-- through Expo's push service (see lib/notify.js) to profiles.push_token, reserved
+-- for the one genuinely time-sensitive/blocking case — pin_reset_requested/reviewed.
+CREATE TABLE IF NOT EXISTS notifications (
+  id VARCHAR(40) PRIMARY KEY,
+  profile_id VARCHAR(40) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  body VARCHAR(500),
+  data JSON,
+  read_at DATETIME NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (profile_id) REFERENCES profiles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
