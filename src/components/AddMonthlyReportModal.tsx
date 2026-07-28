@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   title: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
@@ -194,18 +194,18 @@ const styles = StyleSheet.create({
     right: spacing.xl - 4,
   },
   label: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 8,
   },
   currentFile: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     marginBottom: 6,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 4,
   },

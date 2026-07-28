@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
     marginBottom: 13,
   },
   label: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 5,
@@ -78,14 +78,14 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   valueText: {
-    fontSize: 13,
+    fontSize: 15,
     color: colors.text,
   },
   placeholderText: {
     color: colors.muted,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 4,
   },
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   optionText: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.text,
   },
   optionTextActive: {

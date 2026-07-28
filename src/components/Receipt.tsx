@@ -66,12 +66,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   status: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: '#ffffff',
   },
   amount: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     color: '#ffffff',
     marginTop: 2,
@@ -87,11 +87,11 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   rowLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
   },
   rowValue: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.text,
   },
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   proofLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     marginBottom: 6,
   },
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   proofImgText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.blue,
     flexShrink: 1,
   },

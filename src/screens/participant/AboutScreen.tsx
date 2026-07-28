@@ -103,26 +103,26 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   logoText: {
-    fontSize: 18,
+    fontSize: 21,
     fontWeight: '800',
     color: '#ffffff'
   },
   appName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.navy,
     marginBottom: 14
   },
   sectionTitle: {
     alignSelf: 'flex-start',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginTop: 6,
     marginBottom: 8
   },
   paragraph: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.muted,
     lineHeight: 19,
     textAlign: 'justify',
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg
   },
   footerText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     textAlign: 'center'
   }

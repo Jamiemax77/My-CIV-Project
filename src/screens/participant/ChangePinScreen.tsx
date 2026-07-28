@@ -101,12 +101,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   noticeText: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.text,
     lineHeight: 18,
   },
   label: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 8,
@@ -116,7 +116,7 @@ const styles = StyleSheet.create({
     marginTop: 13,
   },
   errorText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.danger,
     textAlign: 'center',
     marginTop: 8,

@@ -443,7 +443,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16 },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   cancelLink: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.danger,
     marginBottom: 10,
@@ -510,28 +510,28 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   acctTagText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
     color: colors.royal,
   },
   acctType: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
   },
   acctProvider: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
   },
   acctNumber: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.navy,
     marginTop: 10,
     letterSpacing: 1,
   },
   acctName: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 4,
   },
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   acctActionText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
   },
@@ -560,13 +560,13 @@ const styles = StyleSheet.create({
     color: colors.danger,
   },
   fieldLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 8,
   },
   limitHint: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     marginTop: 6,
     lineHeight: 15,
@@ -575,18 +575,18 @@ const styles = StyleSheet.create({
     marginTop: 13,
   },
   hint: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     marginBottom: 6,
     lineHeight: 15,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 4,
   },
   success: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.accent,
     fontWeight: '600',
     marginTop: 4,

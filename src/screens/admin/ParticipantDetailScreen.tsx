@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons'
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
 import React, { useState } from 'react'
 import {
+  Modal,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,10 +11,10 @@ import {
   View
 } from 'react-native'
 import { AdminStackParamList } from '../../app/AdminStack'
+import { AuthImage } from '../../components/AuthImage'
 import { Badge } from '../../components/Badge'
 import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
-import { ConfirmModal } from '../../components/ConfirmModal'
 import { EmptyState } from '../../components/EmptyState'
 import { Header } from '../../components/Header'
 import { ListItem } from '../../components/ListItem'
@@ -24,12 +25,13 @@ import { Skeleton } from '../../components/Skeleton'
 import {
   useAdminParticipants,
   useParticipantMonthlyReports,
-  useResetParticipantPin,
+  useParticipantPinResetRequests,
+  useReviewPinResetRequest,
   useSetScholarshipType
 } from '../../hooks/useAdminData'
 import { useAuthStore } from '../../store/authStore'
 import { formatDate, formatRupiah } from '../../lib/format'
-import { colors, radius } from '../../theme'
+import { colors, radius, spacing } from '../../theme'
 import { MonthlyReport } from '../../types/models'
 
 const GENDER_LABEL: Record<'L' | 'P', string> = {
@@ -53,16 +55,19 @@ export function ParticipantDetailScreen () {
   const { params } = useRoute<ParticipantDetailRoute>()
   const { data: participants, refetch, isRefetching } = useAdminParticipants()
   const setScholarshipType = useSetScholarshipType()
-  const resetPin = useResetParticipantPin()
+  const { data: pinResetRequests } = useParticipantPinResetRequests(params.participantId)
+  const reviewPinReset = useReviewPinResetRequest()
   const token = useAuthStore(s => s.token)
   const {
     data: monthlyReports,
     isLoading: monthlyReportsLoading
   } = useParticipantMonthlyReports(params.participantId)
   const [modalOpen, setModalOpen] = useState(false)
-  const [resetPinConfirmOpen, setResetPinConfirmOpen] = useState(false)
-  const [resetPinDone, setResetPinDone] = useState(false)
+  const [pinReviewOpen, setPinReviewOpen] = useState(false)
+  const [pinResetDone, setPinResetDone] = useState(false)
   const [reportPreview, setReportPreview] = useState<MonthlyReport | null>(null)
+
+  const pendingPinReset = pinResetRequests?.find(r => r.status === 'pending')
 
   const item = participants?.find(p => p.profile.id === params.participantId)
 
@@ -238,12 +243,19 @@ export function ParticipantDetailScreen () {
           <Button
             label='Reset PIN ke Default'
             variant='ghost'
+            disabled={!pendingPinReset}
             onPress={() => {
-              setResetPinDone(false)
-              setResetPinConfirmOpen(true)
+              setPinResetDone(false)
+              setPinReviewOpen(true)
             }}
           />
-          {resetPinDone ? (
+          {!pendingPinReset ? (
+            <Text style={styles.resetPinHint}>
+              Tombol aktif setelah partisipan mengajukan permintaan reset PIN
+              (verifikasi wajah) dari layar login.
+            </Text>
+          ) : null}
+          {pinResetDone ? (
             <Text style={styles.resetPinSuccess}>
               PIN berhasil direset ke 000000. Beri tahu partisipan untuk login
               lalu membuat PIN baru.
@@ -270,21 +282,72 @@ export function ParticipantDetailScreen () {
         onClose={() => setModalOpen(false)}
       />
 
-      <ConfirmModal
-        visible={resetPinConfirmOpen}
-        title='Reset PIN Partisipan?'
-        message={`PIN ${profile.fullName} akan direset ke 000000. Partisipan wajib membuat PIN baru saat login berikutnya.`}
-        confirmLabel='Reset PIN'
-        cancelLabel='Batal'
-        destructive
-        onConfirm={() => {
-          setResetPinConfirmOpen(false)
-          resetPin.mutate(profile.id, {
-            onSuccess: () => setResetPinDone(true)
-          })
-        }}
-        onCancel={() => setResetPinConfirmOpen(false)}
-      />
+      <Modal
+        visible={pinReviewOpen}
+        transparent
+        animationType='fade'
+        onRequestClose={() => setPinReviewOpen(false)}
+      >
+        <View style={styles.reviewBackdrop}>
+          <View style={styles.reviewCard}>
+            <Text style={styles.reviewTitle}>Verifikasi Permintaan Reset PIN</Text>
+            <Text style={styles.reviewSubtitle}>
+              {profile.fullName} mengajukan reset PIN. Periksa 3 foto swafoto
+              berikut sebelum menyetujui.
+            </Text>
+            {pendingPinReset ? (
+              <View style={styles.selfieRow}>
+                {(
+                  [
+                    { label: 'Depan', fileId: pendingPinReset.selfieFrontFileId },
+                    { label: 'Kiri', fileId: pendingPinReset.selfieLeftFileId },
+                    { label: 'Kanan', fileId: pendingPinReset.selfieRightFileId }
+                  ] as const
+                ).map(s => (
+                  <View key={s.label} style={styles.selfieCol}>
+                    <AuthImage fileId={s.fileId} token={token} style={styles.selfieImg} />
+                    <Text style={styles.selfieLabel}>{s.label}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            <View style={styles.reviewBtnRow}>
+              <Button
+                label='Tolak'
+                variant='reject'
+                style={styles.reviewBtn}
+                loading={reviewPinReset.isPending}
+                onPress={() => {
+                  if (!pendingPinReset) return
+                  reviewPinReset.mutate(
+                    { id: pendingPinReset.id, status: 'rejected' },
+                    { onSuccess: () => setPinReviewOpen(false) }
+                  )
+                }}
+              />
+              <Button
+                label='Setujui & Reset'
+                variant='approve'
+                style={styles.reviewBtn}
+                loading={reviewPinReset.isPending}
+                onPress={() => {
+                  if (!pendingPinReset) return
+                  reviewPinReset.mutate(
+                    { id: pendingPinReset.id, status: 'approved' },
+                    {
+                      onSuccess: () => {
+                        setPinReviewOpen(false)
+                        setPinResetDone(true)
+                      }
+                    }
+                  )
+                }}
+              />
+            </View>
+            <Button label='Batal' variant='ghost' onPress={() => setPinReviewOpen(false)} />
+          </View>
+        </View>
+      </Modal>
     </View>
   )
 }
@@ -306,23 +369,23 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   avatarText: {
-    fontSize: 22,
+    fontSize: 25,
     fontWeight: '800',
     color: '#ffffff'
   },
   heroName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text
   },
   heroId: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 2,
     marginBottom: 8
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10
@@ -332,7 +395,7 @@ const styles = StyleSheet.create({
     marginBottom: 20
   },
   balanceValue: {
-    fontSize: 20,
+    fontSize: 23,
     fontWeight: '800',
     color: colors.navy
   },
@@ -355,20 +418,84 @@ const styles = StyleSheet.create({
   },
   infoMain: { flex: 1 },
   infoK: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted
   },
   infoV: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
     marginTop: 1
   },
   resetPinSuccess: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.accent,
     fontWeight: '600',
     textAlign: 'center',
     marginTop: 8
+  },
+  resetPinHint: {
+    fontSize: 12,
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: 8
+  },
+  reviewBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(12,34,51,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl
+  },
+  reviewCard: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.xl
+  },
+  reviewTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    textAlign: 'center'
+  },
+  reviewSubtitle: {
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 14,
+    lineHeight: 18
+  },
+  selfieRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: 16
+  },
+  selfieCol: {
+    flex: 1,
+    alignItems: 'center'
+  },
+  selfieImg: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radius.md,
+    backgroundColor: colors.skySoft,
+    marginBottom: 4
+  },
+  selfieLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.navy
+  },
+  reviewBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8
+  },
+  reviewBtn: {
+    flex: 1,
+    marginTop: 0
   }
 })

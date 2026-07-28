@@ -6,6 +6,8 @@ const authRoutes = require('./routes/auth');
 const participantRoutes = require('./routes/participant');
 const adminRoutes = require('./routes/admin');
 const fileRoutes = require('./routes/files');
+const pinResetRoutes = require('./routes/pinReset');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -26,6 +28,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/participant', participantRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/pin-reset', pinResetRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ ok: false, error: 'Endpoint tidak ditemukan.' });

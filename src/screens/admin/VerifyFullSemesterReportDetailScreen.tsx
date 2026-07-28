@@ -1,8 +1,9 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AdminStackParamList } from '../../app/AdminStack';
+import { AuthImage } from '../../components/AuthImage';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -15,7 +16,6 @@ import {
   useAdminFullSemesterReports,
   useReviewFullSemesterReport,
 } from '../../hooks/useAdminData';
-import { buildFileUrl } from '../../lib/api';
 import { formatDate, formatRupiah } from '../../lib/format';
 import { openRemotePdf } from '../../lib/pdf';
 import { useAuthStore } from '../../store/authStore';
@@ -177,13 +177,7 @@ export function VerifyFullSemesterReportDetailScreen() {
             activities.map((m) => (
               <View key={m.id} style={styles.activityCard}>
                 {m.fileId ? (
-                  <Image
-                    source={{
-                      uri: buildFileUrl(m.fileId),
-                      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-                    }}
-                    style={styles.activityPhoto}
-                  />
+                  <AuthImage fileId={m.fileId} token={token} style={styles.activityPhoto} />
                 ) : null}
                 <View style={styles.activityMain}>
                   <Text style={styles.activityDate}>{formatDate(m.reportDate)}</Text>
@@ -268,12 +262,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   name: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.text,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 2,
   },
@@ -281,14 +275,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   pdfError: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: -10,
     marginBottom: 16,
     textAlign: 'center',
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
@@ -297,7 +291,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   coverLetter: {
-    fontSize: 13,
+    fontSize: 15,
     color: colors.text,
     lineHeight: 19,
   },
@@ -308,17 +302,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   infoLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
   },
   infoValue: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
   checklistLabel: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginRight: 8,
   },
@@ -347,12 +341,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityDate: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.navy,
   },
   activityDesc: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginTop: 2,
   },

@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
   body: { padding: 16 },
   responsive: { width: '100%' },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 16,
@@ -86,13 +86,13 @@ const styles = StyleSheet.create({
     borderColor: '#e9ecef'
   },
   question: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 6
   },
   answer: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.muted,
     lineHeight: 18,
     textAlign: 'justify'
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bg
   },
   footerText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     textAlign: 'center'
   }

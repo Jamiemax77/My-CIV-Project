@@ -1,6 +1,6 @@
-import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 import { api } from '../lib/api';
+import { secureStorage as SecureStore } from '../lib/secureStorage';
 import { Role, UserProfile } from '../types/models';
 
 const SESSION_KEY = 'civ_session_token';
@@ -20,14 +20,20 @@ interface AuthState {
   updateUser: (patch: Partial<UserProfile>) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   hydrated: false,
   isAuthenticated: false,
 
   hydrate: async () => {
-    const token = await SecureStore.getItemAsync(SESSION_KEY);
+    let token: string | null = null;
+    try {
+      token = await SecureStore.getItemAsync(SESSION_KEY);
+    } catch {
+      set({ hydrated: true });
+      return;
+    }
     if (!token) {
       set({ hydrated: true });
       return;
@@ -59,6 +65,17 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    // Best-effort — a device shared between roles/accounts shouldn't keep receiving
+    // push notifications meant for the session that just logged out. Must happen
+    // before the token is cleared below, since the endpoint requires auth.
+    const token = get().token;
+    if (token) {
+      try {
+        await api.delete('/notifications/push-token', token);
+      } catch {
+        // Ignore — logging out must never get stuck on a network hiccup.
+      }
+    }
     await SecureStore.deleteItemAsync(SESSION_KEY);
     set({ user: null, token: null, isAuthenticated: false });
   },

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../theme';
+import { AuthImage } from './AuthImage';
 
 type HeaderProps = {
   variant?: 'participant' | 'admin';
@@ -15,9 +16,9 @@ type HeaderProps = {
   name?: string;
   roleTag?: string;
   avatarInitial?: string;
-  /** When set, renders this image instead of avatarInitial's text fallback. */
-  avatarUri?: string;
-  avatarHeaders?: Record<string, string>;
+  /** When set, renders this file (via AuthImage) instead of avatarInitial's text fallback. */
+  avatarFileId?: string;
+  token?: string | null;
   onAvatarPress?: () => void;
 };
 
@@ -29,8 +30,8 @@ export function Header({
   name,
   roleTag,
   avatarInitial,
-  avatarUri,
-  avatarHeaders,
+  avatarFileId,
+  token,
   onAvatarPress,
 }: HeaderProps) {
   const content = (
@@ -58,11 +59,8 @@ export function Header({
         </View>
         {avatarInitial ? (
           <Pressable onPress={onAvatarPress} style={styles.avatar}>
-            {avatarUri ? (
-              <Image
-                source={{ uri: avatarUri, headers: avatarHeaders }}
-                style={styles.avatarImage}
-              />
+            {avatarFileId ? (
+              <AuthImage fileId={avatarFileId} token={token ?? null} style={styles.avatarImage} />
             ) : (
               <Text style={styles.avatarText}>{avatarInitial}</Text>
             )}
@@ -115,17 +113,17 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
   title: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ffffff',
   },
   greet: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#ffffff',
     opacity: 0.85,
   },
   name: {
-    fontSize: 17,
+    fontSize: 20,
     fontWeight: '700',
     color: '#ffffff',
     marginTop: 2,
@@ -139,7 +137,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   roleTagText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '600',
     color: '#ffffff',
   },
@@ -152,7 +150,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
   },

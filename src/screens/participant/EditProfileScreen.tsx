@@ -251,18 +251,18 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   readOnlyName: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     marginTop: 4,
   },
   readOnlyId: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 2,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
@@ -286,17 +286,17 @@ const styles = StyleSheet.create({
   },
   infoMain: { flex: 1 },
   infoK: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
   },
   infoV: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
     marginTop: 1,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     textAlign: 'center',
     marginBottom: 8,

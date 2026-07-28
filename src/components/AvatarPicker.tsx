@@ -2,8 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { buildFileUrl } from '../lib/api';
 import { colors } from '../theme';
+import { AuthImage } from './AuthImage';
 
 export type PickedPhoto = { uri: string; name: string };
 
@@ -48,20 +48,15 @@ export function AvatarPicker({
     onPick({ uri: asset.uri, name: asset.fileName ?? asset.uri.split('/').pop() ?? 'foto.jpg' });
   };
 
-  const imageSource = localUri
-    ? { uri: localUri }
-    : remoteFileId
-      ? { uri: buildFileUrl(remoteFileId), headers: token ? { Authorization: `Bearer ${token}` } : undefined }
-      : null;
+  const avatarStyle = { width: size, height: size, borderRadius: size / 2 };
 
   return (
     <View style={styles.wrap}>
       <View style={[styles.photoWrap, { width: size, height: size, borderRadius: size / 2 }]}>
-        {imageSource ? (
-          <Image
-            source={imageSource}
-            style={{ width: size, height: size, borderRadius: size / 2 }}
-          />
+        {localUri ? (
+          <Image source={{ uri: localUri }} style={avatarStyle} />
+        ) : remoteFileId ? (
+          <AuthImage fileId={remoteFileId} token={token ?? null} style={avatarStyle} />
         ) : (
           <Text style={[styles.photoInitial, { fontSize: size * 0.34 }]}>{initial}</Text>
         )}
@@ -145,12 +140,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   menuText: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
   },
   error: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 6,
   },

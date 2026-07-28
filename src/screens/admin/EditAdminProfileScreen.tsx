@@ -166,7 +166,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     textAlign: 'center',
     marginBottom: 8,

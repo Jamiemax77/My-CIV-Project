@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Image, Modal, StyleSheet, Text, View } from 'react-native';
-import { buildFileUrl } from '../lib/api';
+import React, { useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { isImageFileId } from '../lib/fileType';
+import { openRemotePdf } from '../lib/pdf';
 import { colors, radius, spacing } from '../theme';
+import { AuthImage } from './AuthImage';
 import { Button } from './Button';
 
 type FilePreviewModalProps = {
@@ -23,6 +24,22 @@ export function FilePreviewModal({
   token,
   onClose,
 }: FilePreviewModalProps) {
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onOpenDocument = async () => {
+    if (!fileId) return;
+    setError(null);
+    setOpening(true);
+    try {
+      await openRemotePdf(fileId, token, fileName || fileId.split('__').pop() || 'berkas.pdf');
+    } catch {
+      setError('Gagal membuka berkas. Coba lagi.');
+    } finally {
+      setOpening(false);
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -31,25 +48,30 @@ export function FilePreviewModal({
 
           {fileId ? (
             isImageFileId(fileId) ? (
-              <Image
-                source={{
-                  uri: buildFileUrl(fileId),
-                  headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-                }}
-                style={styles.photo}
-                resizeMode="contain"
-              />
+              <AuthImage fileId={fileId} token={token} style={styles.photo} resizeMode="contain" />
             ) : (
-              <View style={styles.fileRow}>
+              <Pressable style={styles.fileRow} onPress={onOpenDocument} disabled={opening}>
                 <Ionicons name="document-text-outline" size={16} color={colors.blue} />
                 <Text style={styles.fileText} numberOfLines={1}>
                   {fileName || fileId.split('__').pop()}
                 </Text>
-              </View>
+                {opening ? (
+                  <ActivityIndicator size="small" color={colors.blue} style={styles.fileAction} />
+                ) : (
+                  <Ionicons
+                    name="open-outline"
+                    size={16}
+                    color={colors.blue}
+                    style={styles.fileAction}
+                  />
+                )}
+              </Pressable>
             )
           ) : (
             <Text style={styles.empty}>Berkas tidak tersedia.</Text>
           )}
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <Button label="Tutup" variant="ghost" style={styles.closeBtn} onPress={onClose} />
         </View>
@@ -74,7 +96,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   title: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
@@ -97,13 +119,22 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   fileText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.blue,
     flexShrink: 1,
   },
+  fileAction: {
+    marginLeft: 'auto',
+  },
   empty: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.muted,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 13,
+    color: colors.danger,
     textAlign: 'center',
     marginBottom: 8,
   },

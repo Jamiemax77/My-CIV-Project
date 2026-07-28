@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16 },
   fieldLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 8
@@ -320,12 +320,12 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   noticeText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     lineHeight: 17
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     textAlign: 'center',
     marginBottom: 8

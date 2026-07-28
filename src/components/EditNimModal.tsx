@@ -74,20 +74,20 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   title: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.muted,
     textAlign: 'center',
     marginTop: 4,
     marginBottom: 16,
   },
   saving: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.royal,
     fontWeight: '600',
     textAlign: 'center',

@@ -3,7 +3,6 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import React from 'react'
 import {
-  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,14 +11,16 @@ import {
   View
 } from 'react-native'
 import { ParticipantStackParamList } from '../../app/ParticipantStack'
+import { AuthImage } from '../../components/AuthImage'
 import { Badge } from '../../components/Badge'
 import { Button } from '../../components/Button'
 import { Card } from '../../components/Card'
 import { EditNimModal } from '../../components/EditNimModal'
 import { Header } from '../../components/Header'
 import { ResponsiveContainer } from '../../components/ResponsiveContainer'
+import { useUnreadNotificationCount } from '../../hooks/useNotifications'
 import { useUpdateNim } from '../../hooks/useParticipantData'
-import { api, buildFileUrl } from '../../lib/api'
+import { api } from '../../lib/api'
 import { useAuthStore } from '../../store/authStore'
 import { colors, radius } from '../../theme'
 import { UserProfile } from '../../types/models'
@@ -42,6 +43,7 @@ type MenuItem = {
   iconBg: string
   label: string
   onPress?: () => void
+  badgeCount?: number
 }
 
 export function ProfileScreen () {
@@ -51,6 +53,7 @@ export function ProfileScreen () {
   const token = useAuthStore(s => s.token)
   const logout = useAuthStore(s => s.logout)
   const updateNim = useUpdateNim()
+  const { data: unreadData } = useUnreadNotificationCount()
   const [nimModalOpen, setNimModalOpen] = React.useState(false)
   const [refreshing, setRefreshing] = React.useState(false)
   const [settingsOpen, setSettingsOpen] = React.useState(true)
@@ -147,7 +150,9 @@ export function ProfileScreen () {
     {
       icon: 'notifications-outline',
       iconBg: colors.skySoft,
-      label: 'Notifikasi'
+      label: 'Notifikasi',
+      onPress: () => navigation.navigate('Notifications'),
+      badgeCount: unreadData?.count
     },
     {
       icon: 'information-circle-outline',
@@ -182,15 +187,7 @@ export function ProfileScreen () {
             onPress={() => navigation.navigate('EditProfile')}
           >
             {user?.photoUrl ? (
-              <Image
-                source={{
-                  uri: buildFileUrl(user.photoUrl),
-                  headers: token
-                    ? { Authorization: `Bearer ${token}` }
-                    : undefined
-                }}
-                style={styles.photoImage}
-              />
+              <AuthImage fileId={user.photoUrl} token={token} style={styles.photoImage} />
             ) : (
               <Text style={styles.photoInitial}>{initial}</Text>
             )}
@@ -266,6 +263,13 @@ export function ProfileScreen () {
                     <Ionicons name={item.icon} size={15} color={colors.navy} />
                   </View>
                   <Text style={styles.menuLabel}>{item.label}</Text>
+                  {item.badgeCount ? (
+                    <View style={styles.menuBadge}>
+                      <Text style={styles.menuBadgeText}>
+                        {item.badgeCount > 9 ? '9+' : item.badgeCount}
+                      </Text>
+                    </View>
+                  ) : null}
                   <Ionicons
                     name='chevron-forward'
                     size={16}
@@ -316,7 +320,7 @@ const styles = StyleSheet.create({
     marginBottom: 10
   },
   photoInitial: {
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '800',
     color: '#ffffff'
   },
@@ -339,12 +343,12 @@ const styles = StyleSheet.create({
     borderColor: colors.navy
   },
   heroName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '700',
     color: '#ffffff'
   },
   heroId: {
-    fontSize: 11,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.75)',
     marginTop: 2
   },
@@ -356,13 +360,13 @@ const styles = StyleSheet.create({
     borderRadius: 20
   },
   heroTagText: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '700',
     color: '#ffffff'
   },
   body: { padding: 16 },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy
   },
@@ -391,11 +395,11 @@ const styles = StyleSheet.create({
   },
   infoMain: { flex: 1 },
   infoK: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted
   },
   infoV: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
     marginTop: 1
@@ -418,8 +422,23 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text
+  },
+  menuBadge: {
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    paddingHorizontal: 5,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4
+  },
+  menuBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#ffffff'
   }
 })

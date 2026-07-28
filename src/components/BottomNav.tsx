@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../theme';
 
-const NAV_HEIGHT = 58;
+const NAV_HEIGHT = 66;
 
 export type BottomNavItem = {
   key: string;
@@ -34,7 +34,7 @@ export function BottomNav({ items, activeKey, onChange }: BottomNavProps) {
           >
             <Ionicons
               name={item.icon}
-              size={19}
+              size={26}
               color={active ? colors.navy : colors.muted}
             />
             <Text style={[styles.label, active && styles.labelActive]}>
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   label: {
-    fontSize: 9,
+    fontSize: 10,
     color: colors.muted,
   },
   labelActive: {

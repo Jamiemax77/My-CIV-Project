@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Image, Modal, StyleSheet, Text, View } from 'react-native';
-import { buildFileUrl } from '../lib/api';
+import React, { useState } from 'react';
+import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatDate } from '../lib/format';
+import { openRemotePdf } from '../lib/pdf';
 import { colors, radius, spacing } from '../theme';
 import { MonthlyReport } from '../types/models';
+import { AuthImage } from './AuthImage';
 import { Button } from './Button';
 
 function isImageFile(fileId?: string) {
@@ -28,6 +29,23 @@ export function MonthlyReportDetailModal({
   onClose,
   onEdit,
 }: MonthlyReportDetailModalProps) {
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const onOpenDocument = async () => {
+    const fileId = report?.fileId;
+    if (!fileId) return;
+    setError(null);
+    setOpening(true);
+    try {
+      await openRemotePdf(fileId, token, fileId.split('__').pop() || 'berkas.pdf');
+    } catch {
+      setError('Gagal membuka berkas. Coba lagi.');
+    } finally {
+      setOpening(false);
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.backdrop}>
@@ -40,23 +58,28 @@ export function MonthlyReportDetailModal({
 
               {report.fileId ? (
                 isImageFile(report.fileId) ? (
-                  <Image
-                    source={{
-                      uri: buildFileUrl(report.fileId),
-                      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-                    }}
-                    style={styles.photo}
-                    resizeMode="cover"
-                  />
+                  <AuthImage fileId={report.fileId} token={token} style={styles.photo} />
                 ) : (
-                  <View style={styles.fileRow}>
+                  <Pressable style={styles.fileRow} onPress={onOpenDocument} disabled={opening}>
                     <Ionicons name="document-text-outline" size={16} color={colors.blue} />
                     <Text style={styles.fileText} numberOfLines={1}>
                       {report.fileId.split('__').pop()}
                     </Text>
-                  </View>
+                    {opening ? (
+                      <ActivityIndicator size="small" color={colors.blue} style={styles.fileAction} />
+                    ) : (
+                      <Ionicons
+                        name="open-outline"
+                        size={16}
+                        color={colors.blue}
+                        style={styles.fileAction}
+                      />
+                    )}
+                  </Pressable>
                 )
               ) : null}
+
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
             </>
           ) : null}
 
@@ -90,21 +113,21 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   title: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
     marginBottom: 10,
   },
   date: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.navy,
     textAlign: 'center',
     marginBottom: 10,
   },
   description: {
-    fontSize: 13,
+    fontSize: 15,
     color: colors.text,
     lineHeight: 19,
     marginBottom: 14,
@@ -126,9 +149,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   fileText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.blue,
     flexShrink: 1,
+  },
+  fileAction: {
+    marginLeft: 'auto',
+  },
+  errorText: {
+    fontSize: 13,
+    color: colors.danger,
+    textAlign: 'center',
+    marginBottom: 8,
   },
   closeBtn: {
     marginTop: 8,

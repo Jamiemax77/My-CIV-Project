@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md + 1,
   },
   label: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: colors.navy,
     marginBottom: 5,
@@ -79,7 +79,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingVertical: 11,
     paddingHorizontal: 12,
-    fontSize: 13,
+    fontSize: 15,
     color: colors.text,
   },
   textarea: {
@@ -93,12 +93,12 @@ const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   hint: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     marginTop: 4,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 4,
   },

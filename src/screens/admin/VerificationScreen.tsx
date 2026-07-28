@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
   },
   segmentText: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.muted,
   },

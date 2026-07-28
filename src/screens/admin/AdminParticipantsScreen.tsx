@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingVertical: 10,
     paddingHorizontal: 12,
-    fontSize: 12,
+    fontSize: 14,
     color: colors.text,
     marginBottom: 12,
   },
@@ -219,12 +219,12 @@ const styles = StyleSheet.create({
   },
   rowName: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
   },
   rowSubtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 1,
   },
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
   },
   scholarshipTagText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '700',
     color: colors.royal,
   },

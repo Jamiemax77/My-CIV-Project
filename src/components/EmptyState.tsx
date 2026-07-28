@@ -37,13 +37,13 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   title: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     textAlign: 'center',
     marginTop: 4,

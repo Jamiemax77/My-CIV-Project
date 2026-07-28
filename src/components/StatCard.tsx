@@ -44,12 +44,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   value: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.navy,
   },
   label: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.muted,
     marginTop: 2,
   },

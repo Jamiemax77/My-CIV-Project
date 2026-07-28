@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   digit: {
-    fontSize: 20,
+    fontSize: 23,
     fontWeight: '800',
     color: colors.navy,
   },

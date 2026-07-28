@@ -61,12 +61,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     color: colors.text,
   },
   subtitle: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
     marginTop: 1,
   },

@@ -9,6 +9,7 @@ import { FullSemesterReportDetailScreen } from '../screens/participant/FullSemes
 import { FullSemesterReportScreen } from '../screens/participant/FullSemesterReportScreen';
 import { HelpFaqScreen } from '../screens/participant/HelpFaqScreen';
 import { TransferProofScreen } from '../screens/participant/TransferProofScreen';
+import { NotificationScreen } from '../screens/NotificationScreen';
 import { ParticipantTabParamList, ParticipantTabs } from './ParticipantTabs';
 
 export type ParticipantStackParamList = {
@@ -21,6 +22,7 @@ export type ParticipantStackParamList = {
   EditProfile: undefined;
   FullSemesterReport: undefined;
   FullSemesterReportDetail: { reportId: string };
+  Notifications: undefined;
 };
 
 const Stack = createNativeStackNavigator<ParticipantStackParamList>();
@@ -37,6 +39,7 @@ export function ParticipantStack() {
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="FullSemesterReport" component={FullSemesterReportScreen} />
       <Stack.Screen name="FullSemesterReportDetail" component={FullSemesterReportDetailScreen} />
+      <Stack.Screen name="Notifications" component={NotificationScreen} />
     </Stack.Navigator>
   );
 }

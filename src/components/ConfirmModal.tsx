@@ -82,13 +82,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffe3e4',
   },
   title: {
-    fontSize: 15,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
     textAlign: 'center',
   },
   message: {
-    fontSize: 12,
+    fontSize: 14,
     color: colors.muted,
     textAlign: 'center',
     marginTop: 6,

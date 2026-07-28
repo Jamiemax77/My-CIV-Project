@@ -1,7 +1,8 @@
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
 import React from 'react';
-import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ParticipantStackParamList } from '../../app/ParticipantStack';
+import { AuthImage } from '../../components/AuthImage';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
@@ -13,7 +14,6 @@ import {
   useMonthlyReports,
   useReportActivityLinks,
 } from '../../hooks/useParticipantData';
-import { buildFileUrl } from '../../lib/api';
 import { formatDate, formatRupiah } from '../../lib/format';
 import { openRemotePdf } from '../../lib/pdf';
 import { useAuthStore } from '../../store/authStore';
@@ -151,13 +151,7 @@ export function FullSemesterReportDetailScreen() {
             linkedReports.map((m) => (
               <View key={m.id} style={styles.activityCard}>
                 {m.fileId ? (
-                  <Image
-                    source={{
-                      uri: buildFileUrl(m.fileId),
-                      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-                    }}
-                    style={styles.activityPhoto}
-                  />
+                  <AuthImage fileId={m.fileId} token={token} style={styles.activityPhoto} />
                 ) : null}
                 <View style={styles.activityMain}>
                   <Text style={styles.activityDate}>{formatDate(m.reportDate)}</Text>
@@ -202,11 +196,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dateText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
@@ -215,13 +209,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   fileName: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
     color: colors.navy,
     textAlign: 'center',
   },
   coverLetter: {
-    fontSize: 13,
+    fontSize: 15,
     color: colors.text,
     lineHeight: 19,
   },
@@ -229,7 +223,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   errorText: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.danger,
     marginTop: 4,
     textAlign: 'center',
@@ -241,17 +235,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   infoLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
   },
   infoValue: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     color: colors.text,
   },
   checklistLabel: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginRight: 8,
   },
@@ -275,12 +269,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityDate: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: colors.navy,
   },
   activityDesc: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.text,
     marginTop: 2,
   },

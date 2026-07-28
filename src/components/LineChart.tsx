@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyText: {
-    fontSize: 11,
+    fontSize: 13,
     color: colors.muted,
   },
 });

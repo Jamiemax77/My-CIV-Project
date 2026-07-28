@@ -13,7 +13,6 @@ import { Skeleton } from '../../components/Skeleton';
 import { StatCard } from '../../components/StatCard';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useTransferProofs } from '../../hooks/useParticipantData';
-import { buildFileUrl } from '../../lib/api';
 import { formatDate } from '../../lib/format';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
@@ -35,8 +34,8 @@ export function DashboardScreen() {
         greeting="Selamat datang,"
         name={user?.fullName ?? '-'}
         avatarInitial={initial}
-        avatarUri={user?.photoUrl ? buildFileUrl(user.photoUrl) : undefined}
-        avatarHeaders={token ? { Authorization: `Bearer ${token}` } : undefined}
+        avatarFileId={user?.photoUrl}
+        token={token}
         onAvatarPress={() => navigation.navigate('EditProfile')}
       />
       <ScrollView
@@ -178,7 +177,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
   body: { padding: 16 },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.navy,
     marginBottom: 10,
@@ -193,7 +192,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   amount: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     color: colors.accent,
   },

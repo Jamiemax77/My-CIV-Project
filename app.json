@@ -32,7 +32,8 @@
           "photosPermission": "Aplikasi menggunakan galeri untuk memilih foto bukti pengajuan."
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {
