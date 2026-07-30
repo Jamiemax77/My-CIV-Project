@@ -420,8 +420,36 @@ export function FullSemesterReportScreen () {
     }
   }
 
-  const openKhsDocPicker = (semester: number, mode: 'view' | 'delete') =>
+  const openKhsDocPicker = (semester: number, mode: 'view' | 'delete') => {
+    // When only one of KHS/KRS actually exists for this semester, there's nothing to choose —
+    // asking "KHS or KRS?" via a picker modal when only one is even present read as the action
+    // silently doing nothing (the participant had to guess they still needed to tap an option
+    // inside a second modal). Act directly in that case; only ask when both exist.
+    const entry = khsUploads?.find(k => k.semesterNumber === semester)
+    const options: Array<'khs' | 'krs'> = [
+      entry?.fileId ? ('khs' as const) : null,
+      entry?.krsFileId ? ('krs' as const) : null
+    ].filter((o): o is 'khs' | 'krs' => !!o)
+
+    if (options.length <= 1) {
+      const docType = options[0]
+      if (!docType) return
+      if (mode === 'view') {
+        const fileId = docType === 'khs' ? entry?.fileId : entry?.krsFileId
+        setFilePreview({
+          title: `Semester ${ROMAN[semester - 1]} - ${
+            docType === 'khs' ? 'KHS' : 'KRS'
+          }`,
+          fileId
+        })
+      } else {
+        setDeleteTarget({ kind: 'khs', semester, docType })
+      }
+      return
+    }
+
     setKhsDocPicker({ semester, mode })
+  }
 
   const khsDocPickerEntry = khsDocPicker
     ? khsUploads?.find(k => k.semesterNumber === khsDocPicker.semester)
@@ -1152,46 +1180,50 @@ export function FullSemesterReportScreen () {
                         Semester {ROMAN[sem - 1]}
                       </Text>
                       <View style={styles.khsKrsBtnRow}>
-                        {khsDone ? (
-                          <Badge status='approved' label='KHS ✓' />
-                        ) : (
-                          <Button
-                            label={
-                              uploadingKhs?.semester === sem &&
-                              uploadingKhs.docType === 'khs'
-                                ? 'Mengunggah...'
-                                : 'Unggah KHS'
-                            }
-                            variant='ghost'
-                            style={styles.khsKrsBtn}
-                            disabled={uploadingKhs !== null}
-                            loading={
-                              uploadingKhs?.semester === sem &&
-                              uploadingKhs.docType === 'khs'
-                            }
-                            onPress={() => pickAndUploadKhs(sem, 'khs')}
-                          />
-                        )}
-                        {krsDone ? (
-                          <Badge status='approved' label='KRS ✓' />
-                        ) : (
-                          <Button
-                            label={
-                              uploadingKhs?.semester === sem &&
-                              uploadingKhs.docType === 'krs'
-                                ? 'Mengunggah...'
-                                : 'Unggah KRS'
-                            }
-                            variant='ghost'
-                            style={styles.khsKrsBtn}
-                            disabled={uploadingKhs !== null}
-                            loading={
-                              uploadingKhs?.semester === sem &&
-                              uploadingKhs.docType === 'krs'
-                            }
-                            onPress={() => pickAndUploadKhs(sem, 'krs')}
-                          />
-                        )}
+                        <View style={styles.khsKrsSlot}>
+                          {khsDone ? (
+                            <Badge status='approved' label='KHS ✓' />
+                          ) : (
+                            <Button
+                              label={
+                                uploadingKhs?.semester === sem &&
+                                uploadingKhs.docType === 'khs'
+                                  ? 'Mengunggah...'
+                                  : 'Unggah KHS'
+                              }
+                              variant='ghost'
+                              style={styles.khsKrsBtn}
+                              disabled={uploadingKhs !== null}
+                              loading={
+                                uploadingKhs?.semester === sem &&
+                                uploadingKhs.docType === 'khs'
+                              }
+                              onPress={() => pickAndUploadKhs(sem, 'khs')}
+                            />
+                          )}
+                        </View>
+                        <View style={styles.khsKrsSlot}>
+                          {krsDone ? (
+                            <Badge status='approved' label='KRS ✓' />
+                          ) : (
+                            <Button
+                              label={
+                                uploadingKhs?.semester === sem &&
+                                uploadingKhs.docType === 'krs'
+                                  ? 'Mengunggah...'
+                                  : 'Unggah KRS'
+                              }
+                              variant='ghost'
+                              style={styles.khsKrsBtn}
+                              disabled={uploadingKhs !== null}
+                              loading={
+                                uploadingKhs?.semester === sem &&
+                                uploadingKhs.docType === 'krs'
+                              }
+                              onPress={() => pickAndUploadKhs(sem, 'krs')}
+                            />
+                          )}
+                        </View>
                       </View>
                       {khsDone || krsDone ? (
                         <View style={styles.khsKrsActionsRow}>
@@ -1716,6 +1748,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 6
+  },
+  khsKrsSlot: {
+    flex: 1,
+    alignItems: 'center'
   },
   khsKrsBtn: {
     flex: 1,

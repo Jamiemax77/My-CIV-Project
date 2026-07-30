@@ -90,10 +90,15 @@ export function useAddReimbursement() {
       usageProofFileId?: string;
       usageProofFileName?: string;
     }) => api.post<{ id: string }>('/participant/reimbursements', input, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reimbursements'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-    },
+    // Returning the invalidation promise matters: without it, mutateAsync() resolves the
+    // instant the POST completes, before the invalidated queries actually refetch — callers
+    // that show a success state or close a modal right after awaiting mutateAsync would do so
+    // while the UI still shows stale (pre-mutation) data for a beat, reading as "did nothing."
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reimbursements'] }),
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] }),
+      ]),
   });
 }
 
@@ -141,10 +146,11 @@ export function useAddBudgetItem(reportId: string | undefined) {
         input,
         token
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budgetItems', reportId] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['budgetItems', reportId] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 
@@ -157,10 +163,11 @@ export function useDeleteBudgetItem(reportId: string | undefined) {
         `/participant/full-semester-reports/${reportId}/budget-items/${itemId}`,
         token
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['budgetItems', reportId] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['budgetItems', reportId] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 
@@ -213,10 +220,11 @@ export function useUploadKhs() {
   return useMutation({
     mutationFn: (input: { semesterNumber: number; fileId?: string; krsFileId?: string }) =>
       api.post<{ id: string }>('/participant/khs', input, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['khsUploads'] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['khsUploads'] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 
@@ -226,10 +234,11 @@ export function useDeleteKhsUpload() {
   return useMutation({
     mutationFn: ({ semesterNumber, docType }: { semesterNumber: number; docType: 'khs' | 'krs' }) =>
       api.delete<{ ok: true }>(`/participant/khs/${semesterNumber}/${docType}`, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['khsUploads'] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['khsUploads'] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 
@@ -248,10 +257,11 @@ export function useUploadCommitmentStatement() {
   return useMutation({
     mutationFn: (input: { type: 'participant' | 'guardian'; fileId: string }) =>
       api.post<{ ok: true }>('/participant/commitment-statements', input, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['commitmentStatements'] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['commitmentStatements'] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 
@@ -261,10 +271,11 @@ export function useDeleteCommitmentStatement() {
   return useMutation({
     mutationFn: (type: 'participant' | 'guardian') =>
       api.delete<{ ok: true }>(`/participant/commitment-statements/${type}`, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['commitmentStatements'] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['commitmentStatements'] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 
@@ -339,10 +350,11 @@ export function useLinkActivity(reportId: string | undefined) {
         { monthlyReportId },
         token
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reportActivityLinks', reportId] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reportActivityLinks', reportId] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 
@@ -355,10 +367,11 @@ export function useUnlinkActivity(reportId: string | undefined) {
         `/participant/full-semester-reports/${reportId}/activity-links/${monthlyReportId}`,
         token
       ),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['reportActivityLinks', reportId] });
-      queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['reportActivityLinks', reportId] }),
+        queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+      ]),
   });
 }
 

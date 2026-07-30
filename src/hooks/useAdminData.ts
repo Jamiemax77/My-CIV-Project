@@ -104,10 +104,11 @@ export function useReviewPinResetRequest() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: PinResetRequestStatus }) =>
       api.post<{ ok: true }>(`/admin/pin-reset-requests/${id}/review`, { status }, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['participantPinResetRequests'] });
-      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['participantPinResetRequests'] }),
+        queryClient.invalidateQueries({ queryKey: ['adminParticipants'] }),
+      ]),
   });
 }
 
@@ -248,10 +249,11 @@ export function useReviewReimbursement() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: ReviewStatus }) =>
       api.post<{ ok: true }>(`/admin/reimbursements/${id}/review`, { status }, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminReimbursements'] });
-      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['adminReimbursements'] }),
+        queryClient.invalidateQueries({ queryKey: ['adminParticipants'] }),
+      ]),
   });
 }
 
@@ -270,10 +272,11 @@ export function useReviewReport() {
   return useMutation({
     mutationFn: ({ id, status }: { id: string; status: ReportStatus }) =>
       api.post<{ ok: true }>(`/admin/reports/${id}/review`, { status }, token),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['adminReports'] });
-      queryClient.invalidateQueries({ queryKey: ['adminParticipants'] });
-    },
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['adminReports'] }),
+        queryClient.invalidateQueries({ queryKey: ['adminParticipants'] }),
+      ]),
   });
 }
 
