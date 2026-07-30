@@ -14,6 +14,9 @@ type FilePreviewModalProps = {
   fileName?: string;
   token: string | null;
   onClose: () => void;
+  /** When set, renders a "Hapus" button alongside "Tutup" so the participant can delete
+   * straight from the preview instead of closing it and finding Hapus in the list below. */
+  onDelete?: () => void;
 };
 
 export function FilePreviewModal({
@@ -23,6 +26,7 @@ export function FilePreviewModal({
   fileName,
   token,
   onClose,
+  onDelete,
 }: FilePreviewModalProps) {
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,7 +77,14 @@ export function FilePreviewModal({
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-          <Button label="Tutup" variant="ghost" style={styles.closeBtn} onPress={onClose} />
+          {onDelete ? (
+            <View style={styles.btnRow}>
+              <Button label="Tutup" variant="ghost" style={styles.rowBtn} onPress={onClose} />
+              <Button label="Hapus" variant="reject" style={styles.rowBtn} onPress={onDelete} />
+            </View>
+          ) : (
+            <Button label="Tutup" variant="ghost" style={styles.closeBtn} onPress={onClose} />
+          )}
         </View>
       </View>
     </Modal>
@@ -140,5 +151,14 @@ const styles = StyleSheet.create({
   },
   closeBtn: {
     marginTop: 8,
+  },
+  btnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  rowBtn: {
+    flex: 1,
+    marginTop: 0,
   },
 });

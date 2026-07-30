@@ -73,6 +73,11 @@ import { generateFullSemesterReportPdf, openLocalFile } from '../../lib/pdf'
 import { useAuthStore } from '../../store/authStore'
 import { colors, radius } from '../../theme'
 
+type DeleteTarget =
+  | { kind: 'statement'; type: 'participant' | 'guardian' }
+  | { kind: 'khs'; semester: number; docType: 'khs' | 'krs' }
+  | { kind: 'budget'; itemId: string }
+
 const KHS_SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8]
 const ROMAN = [
   'I',
@@ -200,13 +205,11 @@ export function FullSemesterReportScreen () {
   const [filePreview, setFilePreview] = React.useState<{
     title: string
     fileId?: string
+    deleteTarget?: DeleteTarget
   } | null>(null)
-  const [deleteTarget, setDeleteTarget] = React.useState<
-    | { kind: 'statement'; type: 'participant' | 'guardian' }
-    | { kind: 'khs'; semester: number; docType: 'khs' | 'krs' }
-    | { kind: 'budget'; itemId: string }
-    | null
-  >(null)
+  const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget | null>(
+    null
+  )
   const [khsDocPicker, setKhsDocPicker] = React.useState<{
     semester: number
     mode: 'view' | 'delete'
@@ -440,7 +443,8 @@ export function FullSemesterReportScreen () {
           title: `Semester ${ROMAN[semester - 1]} - ${
             docType === 'khs' ? 'KHS' : 'KRS'
           }`,
-          fileId
+          fileId,
+          deleteTarget: { kind: 'khs', semester, docType }
         })
       } else {
         setDeleteTarget({ kind: 'khs', semester, docType })
@@ -473,7 +477,8 @@ export function FullSemesterReportScreen () {
         title: `Semester ${ROMAN[semester - 1]} - ${
           docType === 'khs' ? 'KHS' : 'KRS'
         }`,
-        fileId
+        fileId,
+        deleteTarget: { kind: 'khs', semester, docType }
       })
     } else {
       setDeleteTarget({ kind: 'khs', semester, docType })
@@ -1269,7 +1274,8 @@ export function FullSemesterReportScreen () {
                         onPress={() =>
                           setFilePreview({
                             title: 'Pernyataan Komitmen Partisipan',
-                            fileId: commitment.participantStmtFileId
+                            fileId: commitment.participantStmtFileId,
+                            deleteTarget: { kind: 'statement', type: 'participant' }
                           })
                         }
                       />
@@ -1314,7 +1320,8 @@ export function FullSemesterReportScreen () {
                         onPress={() =>
                           setFilePreview({
                             title: 'Pernyataan Komitmen Orang Tua/Wali',
-                            fileId: commitment.guardianStmtFileId
+                            fileId: commitment.guardianStmtFileId,
+                            deleteTarget: { kind: 'statement', type: 'guardian' }
                           })
                         }
                       />
@@ -1509,6 +1516,15 @@ export function FullSemesterReportScreen () {
         fileId={filePreview?.fileId}
         token={token}
         onClose={() => setFilePreview(null)}
+        onDelete={
+          filePreview?.deleteTarget
+            ? () => {
+                const target = filePreview.deleteTarget!
+                setFilePreview(null)
+                setDeleteTarget(target)
+              }
+            : undefined
+        }
       />
 
       <DocPickerModal
