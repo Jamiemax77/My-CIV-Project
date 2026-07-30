@@ -40,6 +40,7 @@ import { Header } from '../../components/Header'
 import { LineChart } from '../../components/LineChart'
 import { ResponsiveContainer } from '../../components/ResponsiveContainer'
 import { Skeleton } from '../../components/Skeleton'
+import { SuccessModal } from '../../components/SuccessModal'
 import {
   useAddBudgetItem,
   useAddMonthlyReport,
@@ -210,9 +211,11 @@ export function FullSemesterReportScreen () {
   const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget | null>(
     null
   )
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = React.useState<
+    string | null
+  >(null)
   const [khsDocPicker, setKhsDocPicker] = React.useState<{
     semester: number
-    mode: 'view' | 'delete'
   } | null>(null)
   const [activityModalOpen, setActivityModalOpen] = React.useState(false)
   const [activityError, setActivityError] = React.useState<string | null>(null)
@@ -357,6 +360,7 @@ export function FullSemesterReportScreen () {
       setStmtError(null)
       try {
         await deleteCommitment.mutateAsync(target.type)
+        setDeleteSuccessMessage('Berkas pernyataan berhasil dihapus.')
       } catch (err) {
         setStmtError(
           err instanceof Error ? err.message : 'Gagal menghapus berkas.'
@@ -369,6 +373,9 @@ export function FullSemesterReportScreen () {
           semesterNumber: target.semester,
           docType: target.docType
         })
+        setDeleteSuccessMessage(
+          `Berkas ${target.docType === 'khs' ? 'KHS' : 'KRS'} berhasil dihapus.`
+        )
       } catch (err) {
         setKhsError(
           err instanceof Error ? err.message : 'Gagal menghapus berkas.'
@@ -378,6 +385,7 @@ export function FullSemesterReportScreen () {
       setBudgetError(null)
       try {
         await deleteBudgetItem.mutateAsync(target.itemId)
+        setDeleteSuccessMessage('Item rincian dana berhasil dihapus.')
       } catch (err) {
         setBudgetError(
           err instanceof Error ? err.message : 'Gagal menghapus item.'
@@ -423,11 +431,10 @@ export function FullSemesterReportScreen () {
     }
   }
 
-  const openKhsDocPicker = (semester: number, mode: 'view' | 'delete') => {
-    // When only one of KHS/KRS actually exists for this semester, there's nothing to choose —
-    // asking "KHS or KRS?" via a picker modal when only one is even present read as the action
-    // silently doing nothing (the participant had to guess they still needed to tap an option
-    // inside a second modal). Act directly in that case; only ask when both exist.
+  // "Hapus" now only lives inside the Lihat preview (FilePreviewModal's onDelete) — this picker
+  // exists purely to resolve "Lihat" when both KHS and KRS are uploaded for a semester and it's
+  // ambiguous which one to open; when only one exists, it opens directly with no picker.
+  const openKhsDocPicker = (semester: number) => {
     const entry = khsUploads?.find(k => k.semesterNumber === semester)
     const options: Array<'khs' | 'krs'> = [
       entry?.fileId ? ('khs' as const) : null,
@@ -437,22 +444,18 @@ export function FullSemesterReportScreen () {
     if (options.length <= 1) {
       const docType = options[0]
       if (!docType) return
-      if (mode === 'view') {
-        const fileId = docType === 'khs' ? entry?.fileId : entry?.krsFileId
-        setFilePreview({
-          title: `Semester ${ROMAN[semester - 1]} - ${
-            docType === 'khs' ? 'KHS' : 'KRS'
-          }`,
-          fileId,
-          deleteTarget: { kind: 'khs', semester, docType }
-        })
-      } else {
-        setDeleteTarget({ kind: 'khs', semester, docType })
-      }
+      const fileId = docType === 'khs' ? entry?.fileId : entry?.krsFileId
+      setFilePreview({
+        title: `Semester ${ROMAN[semester - 1]} - ${
+          docType === 'khs' ? 'KHS' : 'KRS'
+        }`,
+        fileId,
+        deleteTarget: { kind: 'khs', semester, docType }
+      })
       return
     }
 
-    setKhsDocPicker({ semester, mode })
+    setKhsDocPicker({ semester })
   }
 
   const khsDocPickerEntry = khsDocPicker
@@ -465,24 +468,20 @@ export function FullSemesterReportScreen () {
 
   const handleKhsDocPick = (key: string) => {
     if (!khsDocPicker) return
-    const { semester, mode } = khsDocPicker
+    const { semester } = khsDocPicker
     const docType = key as 'khs' | 'krs'
     setKhsDocPicker(null)
-    if (mode === 'view') {
-      const fileId =
-        docType === 'khs'
-          ? khsDocPickerEntry?.fileId
-          : khsDocPickerEntry?.krsFileId
-      setFilePreview({
-        title: `Semester ${ROMAN[semester - 1]} - ${
-          docType === 'khs' ? 'KHS' : 'KRS'
-        }`,
-        fileId,
-        deleteTarget: { kind: 'khs', semester, docType }
-      })
-    } else {
-      setDeleteTarget({ kind: 'khs', semester, docType })
-    }
+    const fileId =
+      docType === 'khs'
+        ? khsDocPickerEntry?.fileId
+        : khsDocPickerEntry?.krsFileId
+    setFilePreview({
+      title: `Semester ${ROMAN[semester - 1]} - ${
+        docType === 'khs' ? 'KHS' : 'KRS'
+      }`,
+      fileId,
+      deleteTarget: { kind: 'khs', semester, docType }
+    })
   }
 
   const handleAddActivity = async (input: NewMonthlyReportInput) => {
@@ -1236,13 +1235,7 @@ export function FullSemesterReportScreen () {
                             label='Lihat'
                             variant='ghost'
                             style={styles.uploadSmallBtn}
-                            onPress={() => openKhsDocPicker(sem, 'view')}
-                          />
-                          <Button
-                            label='Hapus'
-                            variant='reject'
-                            style={styles.uploadSmallBtn}
-                            onPress={() => openKhsDocPicker(sem, 'delete')}
+                            onPress={() => openKhsDocPicker(sem)}
                           />
                         </View>
                       ) : null}
@@ -1529,11 +1522,7 @@ export function FullSemesterReportScreen () {
 
       <DocPickerModal
         visible={!!khsDocPicker}
-        title={
-          khsDocPicker?.mode === 'delete'
-            ? 'Pilih berkas untuk dihapus'
-            : 'Pilih berkas untuk dilihat'
-        }
+        title='Pilih berkas untuk dilihat'
         options={khsDocPickerOptions}
         onSelect={handleKhsDocPick}
         onClose={() => setKhsDocPicker(null)}
@@ -1546,6 +1535,13 @@ export function FullSemesterReportScreen () {
         confirmLabel='Hapus'
         onConfirm={confirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <SuccessModal
+        visible={!!deleteSuccessMessage}
+        title='Berhasil Dihapus'
+        message={deleteSuccessMessage ?? ''}
+        onClose={() => setDeleteSuccessMessage(null)}
       />
     </KeyboardAvoidingView>
   )

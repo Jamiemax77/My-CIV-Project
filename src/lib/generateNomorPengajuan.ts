@@ -1,21 +1,25 @@
-import { secureStorage } from './secureStorage';
+import { secureStorage } from './secureStorage'
 
 /** UI-level "Jenis Pengajuan" — richer than the backend's 2-value `type` enum
  * ('reimburse' | 'return'); 'lainnya' maps to type:'reimburse' at submit time (same
  * mapping the pre-wizard screen already used for its "Transaksi Lainnya" chip). */
-export type JenisPengajuanKode = 'reimburse' | 'return' | 'lainnya';
+export type JenisPengajuanKode = 'reimburse' | 'return' | 'lainnya' | 'kasbon'
 
 const KODE_JENIS: Record<JenisPengajuanKode, string> = {
   reimburse: 'RMB',
   return: 'PGS',
   lainnya: 'TRX',
-};
+  kasbon: 'KSB'
+}
 
-const SEQUENCE_KEY_PREFIX = 'civ_nomor_pengajuan_seq_';
+const SEQUENCE_KEY_PREFIX = 'civ_nomor_pengajuan_seq_'
 
-function todayYYYYMMDD(): string {
-  const d = new Date();
-  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+function todayYYYYMMDD (): string {
+  const d = new Date()
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}${String(d.getDate()).padStart(2, '0')}`
 }
 
 /**
@@ -32,13 +36,15 @@ function todayYYYYMMDD(): string {
  * business ever needs a cross-device-safe sequence, have the backend generate its own
  * authoritative number instead and use the value from that response in place of this one.
  */
-export async function generateNomorPengajuan(jenis: JenisPengajuanKode): Promise<string> {
-  const kode = KODE_JENIS[jenis];
-  const tanggal = todayYYYYMMDD();
-  const key = `${SEQUENCE_KEY_PREFIX}${kode}_${tanggal}`;
-  const raw = await secureStorage.getItemAsync(key);
-  const next = (raw ? parseInt(raw, 10) : 0) + 1;
-  await secureStorage.setItemAsync(key, String(next));
-  const urutan = String(next).padStart(4, '0');
-  return `${kode}-${tanggal}-${urutan}`;
+export async function generateNomorPengajuan (
+  jenis: JenisPengajuanKode
+): Promise<string> {
+  const kode = KODE_JENIS[jenis]
+  const tanggal = todayYYYYMMDD()
+  const key = `${SEQUENCE_KEY_PREFIX}${kode}_${tanggal}`
+  const raw = await secureStorage.getItemAsync(key)
+  const next = (raw ? parseInt(raw, 10) : 0) + 1
+  await secureStorage.setItemAsync(key, String(next))
+  const urutan = String(next).padStart(4, '0')
+  return `${kode}-${tanggal}-${urutan}`
 }

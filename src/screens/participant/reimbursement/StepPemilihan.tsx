@@ -11,6 +11,7 @@ const JENIS_OPTIONS: Array<{ key: JenisPengajuanKode; label: string }> = [
   { key: 'reimburse', label: 'Reimbursement' },
   { key: 'return', label: 'Pengembalian Sisa' },
   { key: 'lainnya', label: 'Transaksi Lainnya' },
+  { key: 'kasbon', label: 'Pengajuan Kasbon' },
 ];
 
 const CATEGORIES = Object.entries(REIMBURSEMENT_CATEGORY_LABEL) as Array<
