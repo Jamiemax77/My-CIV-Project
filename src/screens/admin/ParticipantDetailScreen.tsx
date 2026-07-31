@@ -155,7 +155,15 @@ export function ParticipantDetailScreen () {
         <ResponsiveContainer>
           <View style={styles.hero}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initial}</Text>
+              {profile.photoUrl ? (
+                <AuthImage
+                  fileId={profile.photoUrl}
+                  token={token}
+                  style={styles.avatarPhoto}
+                />
+              ) : (
+                <Text style={styles.avatarText}>{initial}</Text>
+              )}
             </View>
             <Text style={styles.heroName}>{profile.fullName}</Text>
             <Text style={styles.heroId}>Nomor ID-{profile.idNumber}</Text>
@@ -366,7 +374,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.navy,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10
+    marginBottom: 10,
+    overflow: 'hidden'
+  },
+  avatarPhoto: {
+    width: '100%',
+    height: '100%'
   },
   avatarText: {
     fontSize: 25,

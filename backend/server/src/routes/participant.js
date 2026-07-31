@@ -614,6 +614,31 @@ router.post(
   })
 );
 
+// Lets a participant re-open their own already-verified report to fix a mistake
+// ("Perbaiki" on the ReportScreen history) — reuses the 'revision' status so the rest
+// of the edit/resubmit pipeline (requireEditableOwnReport, /submit) treats it exactly
+// like an admin-requested revision. Re-verification by admin happens the same way too.
+router.post(
+  '/full-semester-reports/:id/reopen',
+  asyncHandler(async (req, res) => {
+    const [rows] = await pool.query('SELECT * FROM full_semester_reports WHERE id = ? LIMIT 1', [
+      req.params.id,
+    ]);
+    const report = rows[0];
+    if (!report || report.participant_id !== req.session.profileId) {
+      throw new ApiError('Laporan semester tidak ditemukan.', 404);
+    }
+    if (report.status !== 'verified') {
+      throw new ApiError('Hanya laporan yang sudah terverifikasi yang bisa dibuka kembali.');
+    }
+    await pool.query(
+      "UPDATE full_semester_reports SET status = 'revision', reviewed_by = NULL, reviewed_at = NULL WHERE id = ?",
+      [report.id]
+    );
+    res.json({ ok: true, data: { ok: true } });
+  })
+);
+
 router.patch(
   '/full-semester-reports/:id/pdf',
   asyncHandler(async (req, res) => {

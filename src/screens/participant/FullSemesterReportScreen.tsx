@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useNavigation } from '@react-navigation/native'
+import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
 import * as DocumentPicker from 'expo-document-picker'
 import React from 'react'
 import { Controller, useForm } from 'react-hook-form'
@@ -15,6 +15,7 @@ import {
   View
 } from 'react-native'
 import { z } from 'zod'
+import { ParticipantStackParamList } from '../../app/ParticipantStack'
 import {
   AddBudgetItemModal,
   NewBudgetItemInput
@@ -41,6 +42,7 @@ import { LineChart } from '../../components/LineChart'
 import { ResponsiveContainer } from '../../components/ResponsiveContainer'
 import { Skeleton } from '../../components/Skeleton'
 import { SuccessModal } from '../../components/SuccessModal'
+import { YearPickerField } from '../../components/YearPickerField'
 import {
   useAddBudgetItem,
   useAddMonthlyReport,
@@ -139,6 +141,9 @@ const emptyValues: FormValues = {
 
 export function FullSemesterReportScreen () {
   const navigation = useNavigation()
+  const route =
+    useRoute<RouteProp<ParticipantStackParamList, 'FullSemesterReport'>>()
+  const requestedReportId = route.params?.reportId
   const user = useAuthStore(s => s.user)
   const token = useAuthStore(s => s.token)
 
@@ -164,8 +169,15 @@ export function FullSemesterReportScreen () {
 
   const sortedReports = reports ?? []
   const lastReport = sortedReports[sortedReports.length - 1]
+  // "Perbaiki"/"Lengkapi" on ReportScreen's history pass a specific reportId to target —
+  // takes priority over the auto-detect-"last non-verified" heuristic below, since that
+  // heuristic assumes only the most recent semester can ever be reopened for editing.
+  const requestedReport = requestedReportId
+    ? sortedReports.find(r => r.id === requestedReportId)
+    : undefined
   const activeReport =
-    lastReport && lastReport.status !== 'verified' ? lastReport : undefined
+    requestedReport ??
+    (lastReport && lastReport.status !== 'verified' ? lastReport : undefined)
   const targetSemesterNumber = activeReport
     ? activeReport.semesterNumber
     : (lastReport?.semesterNumber ?? 0) + 1
@@ -913,12 +925,10 @@ export function FullSemesterReportScreen () {
                         control={control}
                         name='year'
                         render={({ field }) => (
-                          <Field
+                          <YearPickerField
                             label='Tahun'
-                            placeholder='2026'
-                            keyboardType='numeric'
                             value={field.value}
-                            onChangeText={field.onChange}
+                            onChange={field.onChange}
                             error={errors.year?.message}
                           />
                         )}
@@ -1184,69 +1194,60 @@ export function FullSemesterReportScreen () {
                         Semester {ROMAN[sem - 1]}
                       </Text>
                       <View style={styles.khsKrsBtnRow}>
-                        <View style={styles.khsKrsSlot}>
-                          {khsDone ? (
-                            <Badge status='approved' label='KHS ✓' />
-                          ) : (
-                            <Button
-                              label={
-                                uploadingKhs?.semester === sem &&
-                                uploadingKhs.docType === 'khs'
-                                  ? 'Mengunggah...'
-                                  : 'Unggah KHS'
-                              }
-                              variant='ghost'
-                              style={styles.khsKrsBtn}
-                              disabled={uploadingKhs !== null}
-                              loading={
-                                uploadingKhs?.semester === sem &&
-                                uploadingKhs.docType === 'khs'
-                              }
-                              onPress={() => pickAndUploadKhs(sem, 'khs')}
-                            />
-                          )}
-                        </View>
-                        <View style={styles.khsKrsSlot}>
-                          {krsDone ? (
-                            <Badge status='approved' label='KRS ✓' />
-                          ) : (
-                            <Button
-                              label={
-                                uploadingKhs?.semester === sem &&
-                                uploadingKhs.docType === 'krs'
-                                  ? 'Mengunggah...'
-                                  : 'Unggah KRS'
-                              }
-                              variant='ghost'
-                              style={styles.khsKrsBtn}
-                              disabled={uploadingKhs !== null}
-                              loading={
-                                uploadingKhs?.semester === sem &&
-                                uploadingKhs.docType === 'krs'
-                              }
-                              onPress={() => pickAndUploadKhs(sem, 'krs')}
-                            />
-                          )}
-                        </View>
-                      </View>
-                      {khsDone || krsDone ? (
-                        <View style={styles.khsKrsActionsRow}>
+                        {khsDone ? (
+                          <Badge status='approved' label='KHS ✓' />
+                        ) : (
+                          <Button
+                            label={
+                              uploadingKhs?.semester === sem &&
+                              uploadingKhs.docType === 'khs'
+                                ? 'Mengunggah...'
+                                : 'Unggah KHS'
+                            }
+                            variant='ghost'
+                            style={styles.khsKrsBtn}
+                            disabled={uploadingKhs !== null}
+                            loading={
+                              uploadingKhs?.semester === sem &&
+                              uploadingKhs.docType === 'khs'
+                            }
+                            onPress={() => pickAndUploadKhs(sem, 'khs')}
+                          />
+                        )}
+                        {krsDone ? (
+                          <Badge status='approved' label='KRS ✓' />
+                        ) : (
+                          <Button
+                            label={
+                              uploadingKhs?.semester === sem &&
+                              uploadingKhs.docType === 'krs'
+                                ? 'Mengunggah...'
+                                : 'Unggah KRS'
+                            }
+                            variant='ghost'
+                            style={styles.khsKrsBtn}
+                            disabled={uploadingKhs !== null}
+                            loading={
+                              uploadingKhs?.semester === sem &&
+                              uploadingKhs.docType === 'krs'
+                            }
+                            onPress={() => pickAndUploadKhs(sem, 'krs')}
+                          />
+                        )}
+                        {khsDone || krsDone ? (
                           <Button
                             label='Lihat'
                             variant='ghost'
                             style={styles.uploadSmallBtn}
                             onPress={() => openKhsDocPicker(sem)}
                           />
-                        </View>
-                      ) : null}
+                        ) : null}
+                      </View>
                     </View>
                   )
                 })}
                 {khsError ? (
                   <Text style={styles.errorText}>{khsError}</Text>
-                ) : null}
-                {khsSuccessMessage ? (
-                  <Text style={styles.khsSuccess}>{khsSuccessMessage}</Text>
                 ) : null}
               </Card>
 
@@ -1543,6 +1544,13 @@ export function FullSemesterReportScreen () {
         message={deleteSuccessMessage ?? ''}
         onClose={() => setDeleteSuccessMessage(null)}
       />
+
+      <SuccessModal
+        visible={!!khsSuccessMessage}
+        title='Berhasil Diunggah'
+        message={khsSuccessMessage ?? ''}
+        onClose={() => setKhsSuccessMessage(null)}
+      />
     </KeyboardAvoidingView>
   )
 }
@@ -1688,13 +1696,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 4
   },
-  khsSuccess: {
-    fontSize: 12,
-    color: colors.accent,
-    fontWeight: '600',
-    marginTop: 4,
-    marginBottom: 4
-  },
   tableRow: {
     flexDirection: 'row'
   },
@@ -1758,23 +1759,16 @@ const styles = StyleSheet.create({
   },
   khsKrsBtnRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 8,
     marginTop: 6
   },
-  khsKrsSlot: {
-    flex: 1,
-    alignItems: 'center'
-  },
   khsKrsBtn: {
-    flex: 1,
+    width: 'auto',
     marginTop: 0,
     paddingHorizontal: 10,
     paddingVertical: 6
-  },
-  khsKrsActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 6
   },
   sendDocsBtn: {
     marginTop: 10

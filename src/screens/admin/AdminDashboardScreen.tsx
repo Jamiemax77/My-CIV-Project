@@ -89,15 +89,30 @@ export function AdminDashboardScreen() {
           <>
             <BalanceCard
               label="Bantuan Dana Pendidikan"
-              amount={fundSummary?.totals.sources ?? stats?.totalDisbursed ?? 0}
+              amount={fundSummary?.pendidikanTotals?.sources ?? stats?.totalDisbursed ?? 0}
               rows={[
-                { label: 'Digunakan', value: fundSummary?.totals.received ?? 0 },
-                { label: 'Sisa Dana', value: fundSummary?.totals.remaining ?? 0 },
+                { label: 'Digunakan', value: fundSummary?.pendidikanTotals?.received ?? 0 },
+                { label: 'Sisa Dana', value: fundSummary?.pendidikanTotals?.remaining ?? 0 },
               ]}
               onPress={() => navigation.navigate('FundAllocation')}
               footer={
                 <Text style={styles.heroSub}>
                   {stats?.activeParticipants ?? 0} partisipan aktif dari {stats?.totalParticipants ?? 0} terdaftar · Ketuk untuk rincian
+                </Text>
+              }
+            />
+
+            <BalanceCard
+              label="Dana Lainnya"
+              amount={fundSummary?.lainnyaTotals?.sources ?? 0}
+              rows={[
+                { label: 'Digunakan', value: fundSummary?.lainnyaTotals?.received ?? 0 },
+                { label: 'Sisa Dana', value: fundSummary?.lainnyaTotals?.remaining ?? 0 },
+              ]}
+              onPress={() => navigation.navigate('FundAllocation')}
+              footer={
+                <Text style={styles.heroSub}>
+                  Dana kasbon dan pengeluaran non-beasiswa lainnya · Ketuk untuk rincian
                 </Text>
               }
             />

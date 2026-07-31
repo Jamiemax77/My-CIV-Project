@@ -30,6 +30,10 @@ type ReviewCardProps = {
   exporting?: boolean;
   exportLabel?: string;
   exportingLabel?: string;
+  /** Only meaningful once approved (readOnly) — jumps into Pencairan Dana to actually send the
+   * money (e.g. an approved Kasbon claim), pre-filled with this item's participant/amount. */
+  onSendFunds?: () => void;
+  sendFundsLabel?: string;
 };
 
 export function ReviewCard({
@@ -51,6 +55,8 @@ export function ReviewCard({
   exporting,
   exportLabel = 'Export PDF',
   exportingLabel = 'Membuat PDF...',
+  onSendFunds,
+  sendFundsLabel = 'Kirim Dana',
 }: ReviewCardProps) {
   return (
     <Pressable onPress={onPress} disabled={!onPress}>
@@ -128,6 +134,15 @@ export function ReviewCard({
           ) : null}
         </View>
       ) : null}
+
+      {readOnly && onSendFunds ? (
+        <Button
+          label={sendFundsLabel}
+          variant="navy"
+          onPress={onSendFunds}
+          style={styles.sendFundsBtn}
+        />
+      ) : null}
       </Card>
     </Pressable>
   );
@@ -199,5 +214,8 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     marginTop: 0,
+  },
+  sendFundsBtn: {
+    marginTop: spacing.md,
   },
 });

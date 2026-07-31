@@ -104,6 +104,20 @@ export function AdminProfileScreen() {
           </Card>
         </Pressable>
 
+        <Pressable onPress={() => navigation.navigate('About')}>
+          <Card style={styles.infoCard}>
+            <View style={styles.infoRow}>
+              <View style={styles.infoIco}>
+                <Ionicons name="information-circle-outline" size={15} color={colors.navy} />
+              </View>
+              <View style={styles.infoMain}>
+                <Text style={styles.infoV}>Tentang Aplikasi</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+            </View>
+          </Card>
+        </Pressable>
+
         <Button
           label="Edit Profil"
           variant="ghost"

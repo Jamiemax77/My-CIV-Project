@@ -198,6 +198,19 @@ export interface FundSummary {
     received: number;
     remaining: number;
   };
+  /** Same totals, split by fund_sources.scholarship_type / disbursements.program —
+   * 'Lainnya' (e.g. Kasbon payouts) vs the 3 scholarship programs combined. Optional
+   * because an older, not-yet-redeployed backend won't send these fields at all. */
+  pendidikanTotals?: {
+    sources: number;
+    received: number;
+    remaining: number;
+  };
+  lainnyaTotals?: {
+    sources: number;
+    received: number;
+    remaining: number;
+  };
 }
 
 /** Computed (not stored) attachment-completion flags for a full semester report. */

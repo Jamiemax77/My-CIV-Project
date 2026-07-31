@@ -1,4 +1,5 @@
 import { useNavigation } from '@react-navigation/native'
+import Constants from 'expo-constants'
 import React from 'react'
 import { ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Header } from '../../components/Header'
@@ -10,6 +11,8 @@ export function AboutScreen () {
 
   // 1. Tambahkan ini agar variabel currentYear tidak error
   const currentYear = new Date().getFullYear()
+  // app.json's "version" field, read at runtime — same value EAS bakes into the build.
+  const version = Constants.expoConfig?.version ?? '-'
 
   return (
     <View style={styles.screen}>
@@ -82,6 +85,9 @@ export function AboutScreen () {
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           © {currentYear} My CIV Project. Hak Cipta Dilindungi.
+        </Text>
+        <Text style={styles.footerText}>
+          Version : {version}
         </Text>
       </View>
     </View>

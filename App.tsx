@@ -10,8 +10,9 @@ import { queryClient } from './src/lib/queryClient';
 
 export default function App() {
   useEffect(() => {
+    // setBehaviorAsync is a no-op under SDK 54's edge-to-edge default (the OS
+    // controls swipe-reveal behavior itself there) — only hiding the bar still applies.
     if (Platform.OS === 'android') {
-      NavigationBar.setBehaviorAsync('overlay-swipe');
       NavigationBar.setVisibilityAsync('hidden');
     }
   }, []);

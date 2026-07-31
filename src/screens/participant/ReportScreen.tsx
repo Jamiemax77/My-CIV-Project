@@ -1,7 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useState } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ParticipantStackParamList } from '../../app/ParticipantStack';
 import { AddMonthlyReportModal, NewMonthlyReportInput } from '../../components/AddMonthlyReportModal';
 import { Badge } from '../../components/Badge';
@@ -18,6 +19,7 @@ import {
   useDeleteMonthlyReport,
   useFullSemesterReports,
   useMonthlyReports,
+  useReopenFullSemesterReport,
   useUpdateMonthlyReport,
 } from '../../hooks/useParticipantData';
 import { uploadFile } from '../../lib/api';
@@ -25,7 +27,7 @@ import { formatDate } from '../../lib/format';
 import { MONTHLY_REPORT_CATEGORY_LABEL } from '../../lib/labels';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
-import { FullSemesterReportStatus, MonthlyReport } from '../../types/models';
+import { FullSemesterReport, FullSemesterReportStatus, MonthlyReport } from '../../types/models';
 
 const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 
@@ -58,6 +60,7 @@ export function ReportScreen() {
   const updateMonthlyReport = useUpdateMonthlyReport();
   const deleteMonthlyReport = useDeleteMonthlyReport();
   const { data: fullSemesterReports } = useFullSemesterReports();
+  const reopenFullSemesterReport = useReopenFullSemesterReport();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -65,6 +68,8 @@ export function ReportScreen() {
   const [deleteTarget, setDeleteTarget] = useState<MonthlyReport | null>(null);
   const [detailTarget, setDetailTarget] = useState<MonthlyReport | null>(null);
   const [editTarget, setEditTarget] = useState<MonthlyReport | null>(null);
+  const [reopeningId, setReopeningId] = useState<string | null>(null);
+  const [reopenError, setReopenError] = useState<string | null>(null);
 
   const handleSaveMonthlyReport = async (input: NewMonthlyReportInput) => {
     if (!user || !input.file) return;
@@ -120,6 +125,19 @@ export function ReportScreen() {
     if (!editTarget) return;
     setDeleteTarget(editTarget);
     setEditTarget(null);
+  };
+
+  const handlePerbaiki = async (report: FullSemesterReport) => {
+    setReopenError(null);
+    setReopeningId(report.id);
+    try {
+      await reopenFullSemesterReport.mutateAsync(report.id);
+      navigation.navigate('FullSemesterReport', { reportId: report.id });
+    } catch (err) {
+      setReopenError(err instanceof Error ? err.message : 'Gagal membuka kembali laporan.');
+    } finally {
+      setReopeningId(null);
+    }
   };
 
   return (
@@ -196,19 +214,46 @@ export function ReportScreen() {
               <Text style={[styles.sectionTitle, styles.gapTop]}>
                 Riwayat Laporan Semester Lengkap
               </Text>
+              {reopenError ? <Text style={styles.errorText}>{reopenError}</Text> : null}
               {fullSemesterReports.map((r) => (
-                <ListItem
-                  key={r.id}
-                  icon="school"
-                  iconBg={colors.skySoft}
-                  iconColor={colors.navy}
-                  title={`Semester ${ROMAN[r.semesterNumber - 1] ?? r.semesterNumber}`}
-                  subtitle={STATUS_LABEL[r.status]}
-                  onPress={() =>
-                    navigation.navigate('FullSemesterReportDetail', { reportId: r.id })
-                  }
-                  right={<Badge status={STATUS_BADGE[r.status]} label={STATUS_LABEL[r.status]} />}
-                />
+                <View key={r.id} style={styles.semesterRow}>
+                  <Pressable
+                    style={styles.semesterRowMain}
+                    onPress={() =>
+                      navigation.navigate('FullSemesterReportDetail', { reportId: r.id })
+                    }
+                  >
+                    <View style={[styles.iconWrap, { backgroundColor: colors.skySoft }]}>
+                      <Ionicons name="school" size={15} color={colors.navy} />
+                    </View>
+                    <View style={styles.semesterRowText}>
+                      <Text style={styles.rowTitle}>
+                        Semester {ROMAN[r.semesterNumber - 1] ?? r.semesterNumber}
+                      </Text>
+                      <Text style={styles.rowSubtitle}>{STATUS_LABEL[r.status]}</Text>
+                    </View>
+                    <Badge status={STATUS_BADGE[r.status]} label={STATUS_LABEL[r.status]} />
+                  </Pressable>
+                  {r.status === 'verified' ? (
+                    <Button
+                      label={reopeningId === r.id ? 'Memproses...' : 'Perbaiki'}
+                      variant="ghost"
+                      style={styles.semesterActionBtn}
+                      disabled={reopeningId !== null}
+                      loading={reopeningId === r.id}
+                      onPress={() => handlePerbaiki(r)}
+                    />
+                  ) : r.status === 'draft' ? (
+                    <Button
+                      label="Lengkapi"
+                      variant="ghost"
+                      style={styles.semesterActionBtn}
+                      onPress={() =>
+                        navigation.navigate('FullSemesterReport', { reportId: r.id })
+                      }
+                    />
+                  ) : null}
+                </View>
               ))}
             </>
           ) : null}
@@ -295,5 +340,51 @@ const styles = StyleSheet.create({
   },
   gapTop: {
     marginTop: 20,
+  },
+  errorText: {
+    fontSize: 12,
+    color: colors.danger,
+    marginBottom: 8,
+  },
+  semesterRow: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 12,
+    marginBottom: 8,
+  },
+  semesterRowMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  semesterRowText: {
+    flex: 1,
+  },
+  rowTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  rowSubtitle: {
+    fontSize: 13,
+    color: colors.muted,
+    marginTop: 1,
+  },
+  semesterActionBtn: {
+    marginTop: 10,
+    width: 'auto',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
   },
 });

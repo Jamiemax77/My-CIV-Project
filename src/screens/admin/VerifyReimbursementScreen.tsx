@@ -1,5 +1,8 @@
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { AdminStackParamList } from '../../app/AdminStack';
 import { Button } from '../../components/Button';
 import { Chip, ChipGroup } from '../../components/Chip';
 import { EmptyState } from '../../components/EmptyState';
@@ -8,7 +11,7 @@ import { ReviewCard } from '../../components/ReviewCard';
 import { Skeleton } from '../../components/Skeleton';
 import { useAdminReimbursements, useReviewReimbursement } from '../../hooks/useAdminData';
 import { useReimbursementLaporanExport } from '../../hooks/useReimbursementLaporanExport';
-import { formatDate, formatRupiah } from '../../lib/format';
+import { formatAmountInput, formatDate, formatRupiah } from '../../lib/format';
 import { REIMBURSEMENT_CATEGORY_LABEL } from '../../lib/labels';
 import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
@@ -23,7 +26,13 @@ const FILTERS: Array<{ key: FilterKey; label: string }> = [
   { key: 'all', label: 'Semua' },
 ];
 
+// Kasbon has no dedicated column server-side — it's submitted as an ordinary
+// type:'reimburse' claim, distinguishable only by its nomorPengajuan prefix
+// ('KSB-...', see lib/generateNomorPengajuan.ts's KODE_JENIS map).
+const isKasbon = (item: ReimbursementItem) => item.nomorPengajuan?.startsWith('KSB-') ?? false;
+
 export function VerifyReimbursementScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const token = useAuthStore((s) => s.token);
   const { data: reimbursements, isLoading, isError, refetch } = useAdminReimbursements();
   const reviewReimbursement = useReviewReimbursement();
@@ -97,7 +106,9 @@ export function VerifyReimbursementScreen() {
           <ReviewCard
             key={item.id}
             name={item.participantName ?? '-'}
-            subtitle={`${item.participantIdNumber ?? '-'} · Reimbursement ${REIMBURSEMENT_CATEGORY_LABEL[item.category]}`}
+            subtitle={`${item.participantIdNumber ?? '-'} · ${
+              isKasbon(item) ? 'Kasbon' : `Reimbursement ${REIMBURSEMENT_CATEGORY_LABEL[item.category]}`
+            }${item.nomorPengajuan ? ` · ${item.nomorPengajuan}` : ''}`}
             headerRight={<Text style={styles.amount}>{formatRupiah(item.amount)}</Text>}
             rows={[
               { label: 'Kategori', value: REIMBURSEMENT_CATEGORY_LABEL[item.category] },
@@ -115,6 +126,22 @@ export function VerifyReimbursementScreen() {
               item.status !== 'pending' ? () => sharePdf(item.id, laporanInputFor(item)) : undefined
             }
             exporting={exportingId === item.id}
+            onSendFunds={
+              item.status === 'approved' && isKasbon(item)
+                ? () =>
+                    navigation.navigate('Disbursement', {
+                      prefill: {
+                        participantId: item.participantId,
+                        amount: formatAmountInput(String(Math.round(item.amount))),
+                        program: 'Lainnya',
+                        note: `Kasbon ${item.nomorPengajuan ?? item.id} — ${item.description}`.slice(
+                          0,
+                          500
+                        )
+                      }
+                    })
+                : undefined
+            }
           />
         ))}
       </View>

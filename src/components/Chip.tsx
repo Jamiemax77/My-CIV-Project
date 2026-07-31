@@ -1,18 +1,19 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { colors } from '../theme';
 
 type ChipProps = {
   label: string;
   active?: boolean;
   onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 };
 
-export function Chip({ label, active, onPress }: ChipProps) {
+export function Chip({ label, active, onPress, style }: ChipProps) {
   return (
     <Pressable
       onPress={onPress}
-      style={[styles.chip, active && styles.chipActive]}
+      style={[styles.chip, active && styles.chipActive, style]}
     >
       <Text style={[styles.text, active && styles.textActive]}>{label}</Text>
     </Pressable>
@@ -48,6 +49,7 @@ const styles = StyleSheet.create({
   text: {
     fontSize: 13,
     color: '#4a5578',
+    textAlign: 'center',
   },
   textActive: {
     color: '#ffffff',

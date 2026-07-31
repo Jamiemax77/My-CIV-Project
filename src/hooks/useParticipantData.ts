@@ -195,6 +195,18 @@ export function useFinalizeFullSemesterReport() {
   });
 }
 
+/** "Perbaiki" on ReportScreen's history — re-opens an already-verified report (server
+ * flips it to 'revision') so the participant can edit and resubmit it. */
+export function useReopenFullSemesterReport() {
+  const token = useToken();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =>
+      api.post<{ ok: true }>(`/participant/full-semester-reports/${id}/reopen`, {}, token),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['fullSemesterReports'] }),
+  });
+}
+
 export function useSaveFullSemesterReportPdf() {
   const token = useToken();
   const queryClient = useQueryClient();

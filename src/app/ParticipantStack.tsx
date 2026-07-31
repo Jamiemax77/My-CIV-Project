@@ -20,7 +20,7 @@ export type ParticipantStackParamList = {
   HelpFaq: undefined;
   ChangePin: undefined;
   EditProfile: undefined;
-  FullSemesterReport: undefined;
+  FullSemesterReport: { reportId?: string } | undefined;
   FullSemesterReportDetail: { reportId: string };
   Notifications: undefined;
 };

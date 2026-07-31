@@ -1,6 +1,6 @@
 {
   "name": "my-civ-project",
-  "version": "1.0.0",
+  "version": "1.5.1",
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -47,7 +47,8 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "bump-version": "node scripts/bump-version.js"
   },
   "private": true
 }

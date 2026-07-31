@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { AdminStackParamList } from '../../app/AdminStack';
+import { AuthImage } from '../../components/AuthImage';
 import { Badge } from '../../components/Badge';
 import { Button } from '../../components/Button';
 import { EmptyState } from '../../components/EmptyState';
@@ -21,6 +22,7 @@ import { ScholarshipTypeModal } from '../../components/ScholarshipTypeModal';
 import { Skeleton } from '../../components/Skeleton';
 import { useAdminParticipants, useSetScholarshipType } from '../../hooks/useAdminData';
 import { formatRupiah } from '../../lib/format';
+import { useAuthStore } from '../../store/authStore';
 import { colors, radius } from '../../theme';
 import { AdminParticipant } from '../../types/models';
 
@@ -30,6 +32,7 @@ export function AdminParticipantsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<AdminStackParamList>>();
   const { data: participants, isLoading, isError, refetch, isRefetching } = useAdminParticipants();
   const setScholarshipType = useSetScholarshipType();
+  const token = useAuthStore((s) => s.token);
 
   const [search, setSearch] = useState('');
   const [scholarshipTarget, setScholarshipTarget] = useState<AdminParticipant | null>(null);
@@ -110,7 +113,15 @@ export function AdminParticipantsScreen() {
                     { backgroundColor: AVATAR_COLORS[index % AVATAR_COLORS.length] },
                   ]}
                 >
-                  <Ionicons name="person" size={15} color="#ffffff" />
+                  {item.profile.photoUrl ? (
+                    <AuthImage
+                      fileId={item.profile.photoUrl}
+                      token={token}
+                      style={styles.avatarPhoto}
+                    />
+                  ) : (
+                    <Ionicons name="person" size={15} color="#ffffff" />
+                  )}
                 </View>
                 <View style={styles.rowMain}>
                   <View style={styles.rowTop}>
@@ -207,6 +218,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    overflow: 'hidden',
+  },
+  avatarPhoto: {
+    width: '100%',
+    height: '100%',
   },
   rowMain: {
     flex: 1,

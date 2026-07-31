@@ -51,7 +51,12 @@ import {
   SCHOLARSHIP_TYPES
 } from '../../types/models'
 
-const PERIODS = ['Genap 2025/2026', 'Ganjil 2025/2026']
+const PERIODS = [
+  'Ganjil 2025/2026',
+  'Genap 2025/2026',
+  'Ganjil 2026/2027',
+  'Genap 2026/2027'
+]
 
 const TUNAI_SENDER_BANK = 'Tunai'
 const TUNAI_DEST_ACCOUNT = 'Diserahkan langsung (Tunai)'
@@ -162,14 +167,16 @@ export function DisbursementScreen () {
   const [savedMessage, setSavedMessage] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  const prefill = route.params?.prefill
+
   const dataForm = useForm<DataFormValues>({
     resolver: zodResolver(dataSchema),
     defaultValues: {
-      participantId: '',
-      program: SCHOLARSHIP_TYPES[0],
+      participantId: prefill?.participantId ?? '',
+      program: prefill?.program ?? SCHOLARSHIP_TYPES[0],
       period: PERIODS[0],
-      amount: '',
-      note: ''
+      amount: prefill?.amount ?? '',
+      note: prefill?.note ?? ''
     }
   })
 
@@ -561,18 +568,20 @@ export function DisbursementScreen () {
             <Skeleton height={200} radiusSize={radius.lg} />
           ) : step === 'data' ? (
             <>
-              <ChipGroup>
+              <View style={styles.modeRow}>
                 <Chip
                   label='Pencairan Baru'
                   active={mode === 'new'}
                   onPress={() => setMode('new')}
+                  style={styles.modeChip}
                 />
                 <Chip
                   label='Kirim Bukti untuk Pencairan Tersimpan'
                   active={mode === 'existing'}
                   onPress={() => setMode('existing')}
+                  style={styles.modeChip}
                 />
-              </ChipGroup>
+              </View>
 
               {mode === 'new' ? (
                 <View style={styles.gap}>
@@ -1057,6 +1066,15 @@ const styles = StyleSheet.create({
   },
   gap: {
     marginTop: 13
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: 10
+  },
+  modeChip: {
+    flex: 1,
+    borderRadius: radius.md,
+    justifyContent: 'center'
   },
   errorText: {
     fontSize: 12,

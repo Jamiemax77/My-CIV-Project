@@ -304,7 +304,7 @@ router.get(
     // "Transaksi Lainnya" transfers (disbursement_id IS NULL) are miscellaneous non-scholarship
     // payments (e.g. activity transport/consumption) and must not inflate these fund totals.
     const [transfers] = await pool.query(
-      'SELECT participant_id, amount FROM transfer_proofs WHERE disbursement_id IS NOT NULL'
+      'SELECT participant_id, disbursement_id, amount FROM transfer_proofs WHERE disbursement_id IS NOT NULL'
     );
 
     const participants = profiles.map((profile) => {
@@ -327,6 +327,22 @@ router.get(
     const totalSources = sources.reduce((sum, s) => sum + Number(s.amount), 0);
     const totalReceived = participants.reduce((sum, p) => sum + p.received, 0);
 
+    // "Dana Lainnya" (e.g. Kasbon payouts) reuses the same scholarship_type/program = 'Lainnya'
+    // tag that fund_sources/disbursements already support — split out here so the dashboard
+    // can show it as its own pool instead of folding it into "Bantuan Dana Pendidikan".
+    const disbursementProgram = new Map(disbursements.map((d) => [d.id, d.program]));
+    const isLainnya = (program) => program === 'Lainnya';
+
+    const sumSourcesBy = (predicate) =>
+      sources.filter(predicate).reduce((sum, s) => sum + Number(s.amount), 0);
+    const totalSourcesLainnya = sumSourcesBy((s) => isLainnya(s.scholarship_type));
+    const totalSourcesPendidikan = sumSourcesBy((s) => !isLainnya(s.scholarship_type));
+
+    const totalReceivedLainnya = transfers
+      .filter((t) => isLainnya(disbursementProgram.get(t.disbursement_id)))
+      .reduce((sum, t) => sum + Number(t.amount), 0);
+    const totalReceivedPendidikan = totalReceived - totalReceivedLainnya;
+
     res.json({
       ok: true,
       data: {
@@ -336,6 +352,16 @@ router.get(
           sources: totalSources,
           received: totalReceived,
           remaining: totalSources - totalReceived,
+        },
+        pendidikanTotals: {
+          sources: totalSourcesPendidikan,
+          received: totalReceivedPendidikan,
+          remaining: totalSourcesPendidikan - totalReceivedPendidikan,
+        },
+        lainnyaTotals: {
+          sources: totalSourcesLainnya,
+          received: totalReceivedLainnya,
+          remaining: totalSourcesLainnya - totalReceivedLainnya,
         },
       },
     });
